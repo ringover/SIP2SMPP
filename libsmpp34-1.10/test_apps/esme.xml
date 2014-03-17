@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<config>
+    <conn_tcp host="127.0.0.1" port="2775"/>
+    <conn_smpp system_id="login" password="password" system_type="WWW"/>
+    <smpp_msg src="0600000000" dst="0600000000" msg="Non mais alo quoi !"/>
+</config>

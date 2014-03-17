@@ -1,0 +1,3 @@
+#!/bin/bash
+
+clang++ -Wall -pedantic -g SmppP.cpp -o smppp connectionSMPP.o sip/udp_methode.o smpp/tcp.o smpp/smpp.o -lsmpp34 -std=c++11
