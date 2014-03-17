@@ -1,7 +1,8 @@
 make:
 
-
 	clang -Wall -pedantic -g -c sip/udp_methode.c -o sip/udp_methode.o
+	clang -Wall -pedantic -g -c smpp/smpp.c -o sip/smpp.o
+	clang -Wall -pedantic -g -c smpp/tcp.c -o smpp/tcp.o
 	clang++ -Wall -pedantic -g -c createMessageSip.cpp -o createMessageSip.o
 	clang++ -Wall -pedantic -g -c parseSip.cpp -o parseSip.o
 	clang++ -Wall -pedantic -g -c connectionSIP.cpp -o connectionSIP.o
