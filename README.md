@@ -3,22 +3,25 @@ sip2smpp
 
 SIP to SMPP Gateway
 
-INSTALL
+#INSTALL
 
   First, you need to install the "libsmpp34" library :
-    - go to the folder "libsmpp34-1.10"
-    - ./configure
-    - make && make install
+
+> go to the folder "libsmpp34-1.10"
+
+    ./configure
+    make && make install
     
   Now, build the project :
-    - make
-    - make install
+      
+    make
+    make install
     
   Without error, you should have :
-    - a configuration file "config.ini"
-    - a binary file "sip2smpp"
+* a configuration file "config.ini"
+* a binary file "sip2smpp" (default : "/etc/sip2smpp")
     
-CONFIGURATION
+#CONFIGURATION
 
   Edit the configuration file according to your settings, for example :
 
@@ -37,12 +40,13 @@ CONFIGURATION
     sip_local_ip    = 127.0.0.1
     sip_local_port  = 5065
 
-START
+#START
 
-  sip2smpp -c /etc/sip2smpp/config.ini
+    sip2smpp -c /etc/sip2smpp/config.ini
   
-  If you need to help :
-    - sip2smpp -h
+  If you need help :
+
+    sip2smpp -h
 
 
 
