@@ -1,15 +1,16 @@
-sip2smpp
+SIP to SMPP Gateway
 ========
 
-SIP to SMPP Gateway
+This script is designed to convert SIP MESSAGE to SMPP, and SMPP to SIP Messages. You can use it to create SMPP gateway to receive or send SMS via/to Sip proxy. 
 
 Version 1.0
+
 
 ##INSTALL
 
   First, you need to install the "libsmpp34" library :
 
-> go to the folder "libsmpp34-1.10"
+Go to the folder "libsmpp34-1.10"
 
     ./configure
     make && make install
