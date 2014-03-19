@@ -16,7 +16,7 @@ extern "C" {
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <sys/types.h>
-
+#include <unistd.h>
 
 void do_udp_close(int sock);
 

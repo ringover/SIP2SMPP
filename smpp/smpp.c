@@ -24,7 +24,7 @@ int hex2bin(char *hex, unsigned char *bin) {
   unsigned int i = 0;
   unsigned int j = 0;
 
-  /* Trim string if comments present */
+  // Trim string if comments present
   if (strchr(hex, '#') != NULL)
     *strchr(hex, '#') = 0;
   if (strchr(hex, '*') != NULL)
@@ -60,7 +60,7 @@ int do_smpp_connect(SmppConnect *p, int sock_tcp){
     memset(&req, 0, sizeof(bind_transceiver_t));
     memset(&res, 0, sizeof(bind_transceiver_resp_t));
 
-    /* Init PDU ***********************************************************/
+    // Init PDU
     req.command_length   = 0;
     req.command_id       = BIND_TRANSCEIVER;   
     req.command_status   = ESME_ROK;           
@@ -69,18 +69,18 @@ int do_smpp_connect(SmppConnect *p, int sock_tcp){
     sprintf((char*)req.password,"%s",(char*)p->password);
     sprintf((char*)req.system_type,"%s",(char*)p->systemType);
     req.interface_version = SMPP_VERSION;
-#if 0 /* if you need add */
+#if 0 // if you need add 
     req.addr_ton          = 2;
     req.addr_npi          = 1;
     snprintf( b.address_range, sizeof(b.address_range), "%s", "");
 #endif
 
-    /* FIRST STEP: PACK AND SEND */
+    // FIRST STEP: PACK AND SEND
 #include "pack_and_send.inc"
-    /* Set a timer (PENDIENTE) ********************************************/
-    /* SECOND STEP: READ AND UNPACK Response */
+    // Set a timer (PENDIENTE)
+    // SECOND STEP: READ AND UNPACK Response 
 #include "recv_and_unpack.inc"
-    destroy_tlv( res.tlv ); /* Por las dudas */
+    destroy_tlv( res.tlv );
 
     if( res.command_id != BIND_TRANSCEIVER_RESP ||
         res.command_status != ESME_ROK ){
@@ -98,7 +98,7 @@ int do_smpp_connectReceiver(SmppConnect *p, int sock_tcp){
     memset(&req, 0, sizeof(bind_receiver_t));
     memset(&res, 0, sizeof(bind_receiver_resp_t));
 
-    /* Init PDU ***********************************************************/
+    // Init PDU
     req.command_length   = 0;
     req.command_id       = BIND_RECEIVER;
     req.command_status   = ESME_ROK;
@@ -115,10 +115,10 @@ int do_smpp_connectReceiver(SmppConnect *p, int sock_tcp){
 
     /* FIRST STEP: PACK AND SEND */
 #include "pack_and_send.inc"
-    /* Set a timer (PENDIENTE) ********************************************/
-    /* SECOND STEP: READ AND UNPACK Response */
+    // Set a timer (PENDIENTE)
+    // SECOND STEP: READ AND UNPACK Response
 #include "recv_and_unpack.inc"
-    destroy_tlv( res.tlv ); /* Por las dudas */
+    destroy_tlv( res.tlv );
 
     if( res.command_id != BIND_RECEIVER_RESP ||
         res.command_status != ESME_ROK ){
@@ -185,7 +185,7 @@ int do_smpp_send_message(SMS *p, int sock_tcp){
     req.source_addr_ton  = TON_International;
     req.source_addr_npi  = NPI_ISDN_E163_E164;
     sprintf((char*)req.source_addr,"%s",(char*)p->src);
-///printf("................%s",req.source_addr); 
+
     req.dest_addr_ton    = TON_International;
     req.dest_addr_npi    = NPI_ISDN_E163_E164;
     sprintf((char*)req.destination_addr,"%s",(char*)p->dst);
@@ -212,17 +212,17 @@ int do_smpp_send_message(SMS *p, int sock_tcp){
     build_tlv( &(req.tlv), &tlv );
 //#endif
 
-    /* Add other optional param */
+    // Add other optional param
     tlv.tag = TLVID_user_message_reference;
     tlv.length = sizeof(uint16_t);
     tlv.value.val16 = 0x0024;
     build_tlv( &(req.tlv), &tlv );
 
-    /* FIRST STEP: PACK AND SEND */
+    // FIRST STEP: PACK AND SEND
 #include "pack_and_send.inc"
-    destroy_tlv( req.tlv ); /* Por las dudas */
-    /* Set a timer (PENDIENTE) ********************************************/
-    /* SECOND STEP: READ AND UNPACK Response */
+    destroy_tlv( req.tlv );
+    // Set a timer (PENDIENTE)
+    // SECOND STEP: READ AND UNPACK Response
 #include "recv_and_unpack.inc"
 
     if( res.command_id != SUBMIT_SM_RESP ||
@@ -233,7 +233,6 @@ int do_smpp_send_message(SMS *p, int sock_tcp){
     };
     return( 0 );
 }
-
 
 SMS* listend_smpp(int sock_tcp, int verbose){
     SMS *sms = (SMS*)malloc(sizeof(SMS));
@@ -255,6 +254,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
     
     if((ret = select(sock_tcp + 1,&input_set,NULL,NULL,&timeout)) < 0){
 	printf("Error in select socket\n");
+	free(sms);
 	return (SMS*)NULL;
     }
     
@@ -263,14 +263,16 @@ SMS* listend_smpp(int sock_tcp, int verbose){
     	ret = recv(sock_tcp, local_buffer, sizeof(local_buffer),MSG_PEEK);
     	if( ret <= 4 ){
         	printf("Error in recv(PEEK)\n");
+		free(sms);
     		return (SMS*)NULL;
     	}
     
-    	memcpy(&tempo, local_buffer, sizeof(uint32_t)); // get lenght PDU
+    	memcpy(&tempo, local_buffer, sizeof(uint32_t));
     	local_buffer_len = ntohl( tempo );
     	ret = recv(sock_tcp, local_buffer, local_buffer_len, 0);
     	if( ret != local_buffer_len ){
         	printf("Error in recv(%d bytes)\n", local_buffer_len);
+		free(sms);
         	return (SMS*)NULL;
     	}
 
@@ -282,6 +284,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
         	if( ret != 0 ){ 
 			printf("Error in smpp34_dumpBuf():%d:\n%s\n",
         	                       smpp34_errno, smpp34_strerror );
+			free(sms);
 	    		return (SMS*) NULL;
 		}
         	printf("-------------------------- RECEIVE --------------------------\n");
@@ -293,6 +296,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
 	if( ret != 0){
 		printf( "Error in smpp34_unpack():%d:%s\n",
         	                    smpp34_errno, smpp34_strerror);
+		free(sms);
 		return (SMS*)NULL;
     	}
 
@@ -303,6 +307,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
        		if( ret != 0){
 		    printf("Error in smpp34_dumpPdu():%d:\n%s\n",
        		                               smpp34_errno, smpp34_strerror);
+		    free(sms);
 		    return (SMS*) NULL;
        		}
         	printf("--- PDU \n%s\n", print_buffer);
@@ -312,10 +317,11 @@ SMS* listend_smpp(int sock_tcp, int verbose){
     	if( deliv_sm.command_id != DELIVER_SM || deliv_sm.command_status != ESME_ROK ){
         	printf("Error in DELIVER_SM[%d:%d]\n", 
                 	                       deliv_sm.command_id, deliv_sm.command_status);
+		free(sms);
         	return (SMS*)NULL;
     	}
 
-	//copie du SMS
+	//copy SMS
 	if(req.source_addr){
 		sms->src = (char*)malloc(sizeof(char)*(strlen((char*)deliv_sm.source_addr)+1));
 		memset(sms->src,0,(strlen((char*)deliv_sm.source_addr)+1));
@@ -333,10 +339,12 @@ SMS* listend_smpp(int sock_tcp, int verbose){
 	}
 	if(!sms->src || !sms->dst || !sms->msg){
 		printf("Error SMS no valid");
+		free(sms);
 		return (SMS*)NULL;
 	}
 	return (SMS*)sms;
     }
+    free(sms);
     return (SMS*)NULL;
 }
 
@@ -346,16 +354,16 @@ int do_smpp_close(int sock_tcp){
     memset(&req, 0, sizeof(unbind_t));
     memset(&res, 0, sizeof(unbind_resp_t));
 
-    /* Init PDU ***********************************************************/
+    // Init PDU
     req.command_length   = 0;
     req.command_id       = UNBIND;
     req.command_status   = ESME_ROK;
     req.sequence_number  = 3;
 
-    /* FIRST STEP: PACK AND SEND */
+    // FIRST STEP: PACK AND SEND */
 #include "pack_and_send.inc"
-    /* Set a timer (PENDIENTE) ********************************************/
-    /* SECOND STEP: READ AND UNPACK Response */
+    // Set a timer (PENDIENTE)
+    // SECOND STEP: READ AND UNPACK Response 
 #include "recv_and_unpack.inc"
 
     if( res.command_id != UNBIND_RESP ||

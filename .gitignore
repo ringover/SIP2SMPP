@@ -1,6 +1,7 @@
 *~
 *.o
-smsc
 connectionSIP
 connectionSMPP
+sip2smpp
 main
+Makefile.scan

@@ -1,30 +1,11 @@
 /**
 *   This part it used for the daemonize mode.
-*
-*   @author : Mickael ROUSSE
 */
 
-/*
-#include <assert.h>
-#include <pcap.h>
-#include <pcap-bpf.h>
+#include "daemonize.h"
 
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/udp.h>
-#include <netinet/if_ether.h>
-
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <fcntl.h>
-#include <net/if.h>
-#include <unistd.h>
-#include <signal.h>
-*/
-
-/*
 int daemonize(int nofork){
-	FILE *pid_stream;
+/*	FILE *pid_stream;
         pid_t pid;
         int p;
 	struct sigaction new_action;
@@ -67,7 +48,6 @@ int daemonize(int nofork){
                         fprintf(pid_stream, "%i\n", (int)pid);
                         fclose(pid_stream);
                 }
-        }
 
 	// sigation structure
 	new_action.sa_handler = handler;
@@ -86,5 +66,7 @@ int daemonize(int nofork){
 	return 0;
     error:
     return -1;
-}
 */
+	return 0;
+}
+

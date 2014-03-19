@@ -1,8 +1,27 @@
-#ifndef SIP2SMPP_H
-#define SIP2SMPP_H
+#ifndef DAEMONIZE_H
+#define DAEMONIZE_H
 
-char* pid_file = DEFAULT_PIDFILE;
+/*
+#include <assert.h>
+#include <pcap.h>
+#include <pcap-bpf.h>
 
-//int daemonize(int nofork);
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <netinet/udp.h>
+#include <netinet/if_ether.h>
 
-#endif /*SIP2SMPP*/
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <fcntl.h>
+
+#include <net/if.h>
+#include <unistd.h>
+#include <signal.h>
+*/
+
+//char* pid_file = (char*)DEFAULT_PIDFILE;
+
+int daemonize(int nofork);
+
+#endif /*DAEMONIZE*/

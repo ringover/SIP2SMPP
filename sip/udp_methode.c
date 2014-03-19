@@ -33,7 +33,7 @@ int do_udp_connect(int *sock,char *addrIP, int port){
 }
 
 int udp_receive(int sock, char** buffer, size_t buffer_len, int verbos){
-        struct hostent *hostinfo = NULL;
+       // struct hostent *hostinfo = NULL;
         struct sockaddr_in from = { 0 };
         int fromsize = sizeof from;
         int n = 0;
@@ -67,7 +67,7 @@ int udp_receive(int sock, char** buffer, size_t buffer_len, int verbos){
 }
 
 int udp_send(int sock, char* buffer, size_t buffer_len, char* addrIP, int port, int verbos){
-        struct hostent *hostinfo = NULL;
+        //struct hostent *hostinfo = NULL;
         struct sockaddr_in to = { 0 };
         int tosize = sizeof to;
         int n = 0;

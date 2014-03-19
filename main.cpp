@@ -26,7 +26,7 @@
 #include "type_smpp_projet.h"
 #include "iniFile.c"
 
-#include "lib/daemonize/daemonize.h"
+//#include "lib/daemonize/daemonize.h"
 
 
 using namespace std;
@@ -56,7 +56,7 @@ void usage(int8_t e){
     printf("   -h  help\n");
     printf("   -v  show version\n");
     printf("   -f  use fork (parameter 1) | Not implemented\n");
-    printf("   -P  PID file. Default PID file is [%s]\n",DEFAULT_PIDFILE);
+//    printf("   -P  PID file. Default PID file is [%s]\n",DEFAULT_PIDFILE);
     printf("   -c  config file to use to specify some options. Default location is [%s]\n",DEFAULT_CONFIG);
     printf("%s",NONE);
 	exit(e);
@@ -285,7 +285,7 @@ void conversion(){
 */
 
 int main(int argc,char **argv){
-    int c, nofork=0, checkout=0;
+    int c, nofork=0;//, checkout=0;
     char *conffile = NULL;
 
 	program_start = true;
@@ -304,7 +304,7 @@ int main(int argc,char **argv){
                     exit(0);
                     break;
             case 'P':
-                    pid_file = optarg;
+                    //pid_file = optarg;
                     break;
             case 'f':
                     debug  = 1;
@@ -351,7 +351,7 @@ int main(int argc,char **argv){
         fprintf(stdout,"SMPP Server IP   : [%s]\n", mainIni.smpp_server_ip);
         fprintf(stdout,"SMPP Server Port : [%s]\n", mainIni.smpp_server_port);
         fprintf(stdout,"Device           : [%s]\n", mainIni.capt_device);
-        fprintf(stdout,"Pid file         : [%s]\n", pid_file);
+//        fprintf(stdout,"Pid file         : [%s]\n", pid_file);
         fprintf(stdout,"INI file         : [%s]\n", conffile);
     }
 
@@ -402,7 +402,7 @@ int main(int argc,char **argv){
 			//smpp->sendSMS((char*)"0630566333",(char*)"060000003",(char*)"Message de test");
 		}
 		if(str == "sip"){
-			Sip_msg *sip_msg = (Sip_msg*)malloc(sizeof(Sip_msg));
+			//Sip_msg *sip_msg = (Sip_msg*)malloc(sizeof(Sip_msg));
 			
 		}
 		if(str == "fifo"){

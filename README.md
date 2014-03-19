@@ -9,7 +9,7 @@ Version 1.0
 
   First, you need to install the "libsmpp34" library :
 
-> go to the folder "libsmpp34-1.10"
+> https://github.com/bjtpartners/libsmpp34 
 
     ./configure
     make && make install

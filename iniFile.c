@@ -62,7 +62,7 @@ Boolean checkConfigIni(){
 
 Boolean loadFileIni(char *conffile){
     //Init
-    long n;
+    //long n; //use for the ini_gets function
     /*************
     *   [MAIN]   *
     *************/
@@ -73,7 +73,7 @@ Boolean loadFileIni(char *conffile){
 
     char smpp_ip_ini[100]       ="127.0.0.1";
     char smpp_port_ini[100]     ="2775";
-    char device_ini[100]        ="eth0";
+//    char device_ini[100]        ="eth0";
     char user_smpp_ini[100]     ="user";
     char pass_smpp_ini[100]     ="pass";
 
@@ -116,7 +116,8 @@ Boolean loadFileIni(char *conffile){
     */
 
     if(mainIni.sip_dest_ip == NULL) {
-        n = ini_gets("main", "sip_dest_ip", "none", sip_dest_ip_ini, sizearray(sip_dest_ip_ini), conffile);
+	//ini-gets return 0 or the size of Buffer (here : sip_dest_ip_ini)
+        ini_gets("main", "sip_dest_ip", "none", sip_dest_ip_ini, sizearray(sip_dest_ip_ini), conffile);
         if(strcmp(sip_dest_ip_ini, "none") != 0){
             mainIni.sip_dest_ip=(char*)malloc(sizeof(char)*(strlen(sip_dest_ip_ini)+1));
             memset(mainIni.sip_dest_ip,0,sizeof(char)*(strlen(sip_dest_ip_ini)+1));
@@ -125,7 +126,7 @@ Boolean loadFileIni(char *conffile){
     }
 
     if(mainIni.sip_dest_port == NULL) {
-        n = ini_gets("main", "sip_dest_port", "none", sip_dest_port_ini, sizearray(sip_dest_port_ini), conffile);
+        ini_gets("main", "sip_dest_port", "none", sip_dest_port_ini, sizearray(sip_dest_port_ini), conffile);
         if(strcmp(sip_dest_port_ini, "none") != 0) {
             mainIni.sip_dest_port=(char*)malloc(sizeof(char)*(strlen(sip_dest_port_ini)+1));
             memset(mainIni.sip_dest_port,0,sizeof(char)*(strlen(sip_dest_port_ini)+1));
@@ -134,7 +135,7 @@ Boolean loadFileIni(char *conffile){
     }
 
     if(mainIni.sip_local_ip == NULL) {
-        n = ini_gets("main", "sip_local_ip", "none", sip_src_ip_ini, sizearray(sip_src_ip_ini), conffile);
+        ini_gets("main", "sip_local_ip", "none", sip_src_ip_ini, sizearray(sip_src_ip_ini), conffile);
         if(strcmp(sip_src_ip_ini, "none") != 0){
             mainIni.sip_local_ip=(char*)malloc(sizeof(char)*(strlen(sip_src_ip_ini)+1));
             memset(mainIni.sip_local_ip,0,sizeof(char)*(strlen(sip_src_ip_ini)+1));
@@ -143,7 +144,7 @@ Boolean loadFileIni(char *conffile){
     }
 
     if(mainIni.sip_local_port == NULL) {
-        n = ini_gets("main", "sip_local_port", "none", sip_src_port_ini, sizearray(sip_src_port_ini), conffile);
+        ini_gets("main", "sip_local_port", "none", sip_src_port_ini, sizearray(sip_src_port_ini), conffile);
         if(strcmp(sip_src_port_ini, "none") != 0) {
             mainIni.sip_local_port=(char*)malloc(sizeof(char)*(strlen(sip_src_port_ini)+1));
             memset(mainIni.sip_local_port,0,sizeof(char)*(strlen(sip_src_port_ini)+1));
@@ -152,7 +153,7 @@ Boolean loadFileIni(char *conffile){
     }
 
     if(mainIni.smpp_server_ip == NULL) {
-        n = ini_gets("main", "smpp_server_ip", "none", smpp_ip_ini, sizearray(smpp_ip_ini), conffile);
+        ini_gets("main", "smpp_server_ip", "none", smpp_ip_ini, sizearray(smpp_ip_ini), conffile);
         if(strcmp(smpp_ip_ini, "none") != 0) {
             mainIni.smpp_server_ip=(char*)malloc(sizeof(char)*(strlen(smpp_ip_ini)+1));
             memset(mainIni.smpp_server_ip,0,sizeof(char)*(strlen(smpp_ip_ini)+1));
@@ -161,7 +162,7 @@ Boolean loadFileIni(char *conffile){
     }
 
     if(mainIni.smpp_server_port == NULL) {
-        n = ini_gets("main", "smpp_server_port", "none", smpp_port_ini, sizearray(smpp_port_ini), conffile);
+        ini_gets("main", "smpp_server_port", "none", smpp_port_ini, sizearray(smpp_port_ini), conffile);
         if(strcmp(smpp_port_ini, "none") != 0) {
             mainIni.smpp_server_port=(char*)malloc(sizeof(char)*(strlen(smpp_port_ini)+1));
             memset(mainIni.smpp_server_port,0,sizeof(char)*(strlen(smpp_port_ini)+1));
@@ -170,7 +171,7 @@ Boolean loadFileIni(char *conffile){
     }
 
     if(mainIni.user_smpp == NULL) {
-        n = ini_gets("main", "system_id_smpp", "none", user_smpp_ini, sizearray(user_smpp_ini), conffile);
+        ini_gets("main", "system_id_smpp", "none", user_smpp_ini, sizearray(user_smpp_ini), conffile);
         if(strcmp(user_smpp_ini, "none") != 0) {
             mainIni.user_smpp=(char*)malloc(sizeof(char)*(strlen(user_smpp_ini)+1));
             memset(mainIni.user_smpp,0,sizeof(char)*(strlen(user_smpp_ini)+1));
@@ -179,7 +180,7 @@ Boolean loadFileIni(char *conffile){
     }
 
     if(mainIni.pass_smpp == NULL) {
-        n = ini_gets("main", "pass_smpp", "none", pass_smpp_ini, sizearray(pass_smpp_ini), conffile);
+        ini_gets("main", "pass_smpp", "none", pass_smpp_ini, sizearray(pass_smpp_ini), conffile);
         if(strcmp(pass_smpp_ini, "none") != 0) {
             mainIni.pass_smpp=(char*)malloc(sizeof(char)*(strlen(pass_smpp_ini)+1));
             memset(mainIni.pass_smpp,0,sizeof(char)*(strlen(pass_smpp_ini)+1));
@@ -189,7 +190,7 @@ Boolean loadFileIni(char *conffile){
 
     /*
     if(mainIni.capt_device == NULL) {
-        n = ini_gets("main", "device", "none", device_ini, sizearray(device_ini), conffile);
+        ini_gets("main", "device", "none", device_ini, sizearray(device_ini), conffile);
         if(strcmp(device_ini, "none") != 0) {
             mainIni.capt_device=(char*)malloc(sizeof(char)*(strlen(device_ini)+1));
             memset(mainIni.capt_device,0,sizeof(char)*(strlen(device_ini)+1));
