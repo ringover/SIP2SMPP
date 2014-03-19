@@ -1,9 +1,10 @@
-sip2smpp
+SIP to SMPP Gateway
 ========
 
-SIP to SMPP Gateway
+This script is designed to convert SIP MESSAGE to SMPP, and SMPP to SIP Messages. You can use it to create SMPP gateway to receive or send SMS via/to Sip proxy. 
 
 Version 1.0
+
 
 ##INSTALL
 
@@ -60,9 +61,3 @@ v2.0 :
 * change log level
 * add a daemon mode
  
-
-
-
-
-
-
