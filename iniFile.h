@@ -1,7 +1,7 @@
 #ifndef INI_FILE_H
 #define INI_FILE_H
 
-#include "type_smpp_projet.h"
+#include "type_projet.h"
 
 typedef struct Ini_main{
     char *sip_dest_ip;

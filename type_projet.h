@@ -1,5 +1,5 @@
-#ifndef TYPE_SMPP_PROJET_H
-#define TYPE_SMPP_PROJET_H
+#ifndef TYPE_PROJET_H
+#define TYPE_PROJET_H
 
 #define sizearray(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -15,6 +15,7 @@
 *    4 -> underline ; 32 -> green
 *    9 -> strike ; 37 -> grey
 */
+
 #define GRAY       "\033[0;37m]"
 #define RED        "\033[0;31m"
 #define GREEN      "\033[0;32m"
@@ -28,4 +29,4 @@ typedef enum{
     TRUE=1
 }Boolean;
 
-#endif /*TYPE_SMPP_PROJET_H*/
+#endif /*TYPE_PROJET_H*/

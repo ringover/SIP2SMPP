@@ -1,12 +1,19 @@
 /**
-*   This part it used for read the INI File.
+*   \file iniFile.c
 *
-*   @author : Mickael ROUSSE
+*   \brief This part it used for read the INI File.
+*
 */
 
 #include "lib/minIni/minIni.c"
 #include "iniFile.h"
 
+/**
+*  \brief This function check the configuration of the INI file
+*
+*  \return Retrun a boolean corresponding to the check
+*
+*/
 Boolean checkConfigIni(){
     Boolean b = TRUE;
 
@@ -18,7 +25,7 @@ Boolean checkConfigIni(){
 */
 
     if(mainIni.sip_local_ip == NULL) {
-        fprintf(stderr,"\"ssip_src_ip\" must be defined in the INI file!\n");
+        fprintf(stderr,"\"sip_src_ip\" must be defined in the INI file!\n");
         b = FALSE;
     }
 
@@ -28,7 +35,7 @@ Boolean checkConfigIni(){
     }
 
     if(mainIni.sip_dest_ip == NULL) {
-        fprintf(stderr,"\"ssip_dest_ip\" must be defined in the INI file!\n");
+        fprintf(stderr,"\"sip_dest_ip\" must be defined in the INI file!\n");
         b = FALSE;
     }
 
@@ -60,11 +67,19 @@ Boolean checkConfigIni(){
     return b;
 }
 
+/**
+*  \brief This function load the INI file
+*
+*  \param conffile This parameter is a path of the INI file
+*
+*  \return Retrun TRUE if the file is loaded
+*
+*/
 Boolean loadFileIni(char *conffile){
     //Init
     //long n; //use for the ini_gets function
     /*************
-    *   [MAIN]   *
+    *   [MAIN]   * 
     *************/
     char sip_src_port_ini[100]  ="127.0.0.1";
     char sip_src_ip_ini[100]    ="5080";

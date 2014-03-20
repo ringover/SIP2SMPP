@@ -1,5 +1,9 @@
 /**
-*   This part it used for the daemonize mode.
+*  \file daemoniza.c
+* 
+*  \brief This part it used for the daemonize mode.
+*
+*         It is a example of daemonize mode, 
 */
 
 #include "daemonize.h"

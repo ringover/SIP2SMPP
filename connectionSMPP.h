@@ -27,7 +27,7 @@ class Connection_SMPP{
 	*	Attribut
 	*/
 	protected:
-		bool verbose;
+		bool verbos;
 		int sock_tcp;
 		int bind;
 	/**
@@ -38,7 +38,7 @@ class Connection_SMPP{
 		/**
 		*	Contructor/Destructor
 		*/
-		Connection_SMPP(string server_ip, string server_port, string user_smpp, string pass_smpp, int bind, bool verbose);
+		Connection_SMPP(string server_ip, string server_port, string user_smpp, string pass_smpp, int bind, bool verbos);
 		~Connection_SMPP(void);
 	
 		int getSocket(){
@@ -50,7 +50,7 @@ class Connection_SMPP{
 		/**
 		*	Function of SMS receive/send
 		*/
-		bool sendSMS(char* fromPhoneNb, char* toPhoneNb, char* msg);
+		bool sendSMS(char* fromMsisdn, char* toMsisdn, char* msg);
 		bool sendSMS(SMS &sms);
 		//std::thread* receiverSMS();
 		SMS* receiverSMS(bool verbos);

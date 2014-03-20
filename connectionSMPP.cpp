@@ -1,11 +1,25 @@
 /**
-*	Transceiver SMPP
+*  \file ConnectionSMPP.cpp
+*  
+*  \brief This file contain all function to the Connection_SMPP object.
+*  
 */
 #include "connectionSMPP.h"
 
-Connection_SMPP::Connection_SMPP(string server_ip, string server_port, string user_smpp, string pass_smpp, int bind, bool verbose){
+/**
+*  \brief This function is a constructor to the Connection_SMPP object, it allow to initialize a SMPP connection
+*
+*  \param server_ip   This parameter is the IP of the BTS server 
+*  \param server_port This parameter is the port of the BTS server
+*  \param user_smpp   This parameter is the login of the BTS server
+*  \param pass_smpp   This parameter is the password of the BTS server
+*  \param bind        This parameter is mode of connection : BIND_RECEIVER | BIND_TRANSMITTER | BIND_TRANSCEIVER
+*  \param verbos      It use for enable or disable the verbosity
+*
+*/
+Connection_SMPP::Connection_SMPP(string server_ip, string server_port, string user_smpp, string pass_smpp, int bind, bool verbos){
 	cout << "\033[0;33;40mLoading SMPP \033[0m";
-	this->verbose = verbose;
+	this->verbos = verbos;
 	this->bind = bind;
 	this->connect = false;
 	cout << "\033[0;33;40m..\033[0m";
@@ -50,6 +64,9 @@ Connection_SMPP::Connection_SMPP(string server_ip, string server_port, string us
 	return;
 }
 
+/**
+*  \brief This function is a destructor to the Connection_SMPP object
+*/
 Connection_SMPP::~Connection_SMPP(void){
         cout << "\033[0;31;40mtransceiver ..\033[0m" << sock_tcp << endl;
 	this->connect=false;
@@ -61,19 +78,32 @@ Connection_SMPP::~Connection_SMPP(void){
 	return;
 }
 
-bool Connection_SMPP::sendSMS(char* fromPhoneNb, char* toPhoneNb, char *message){//, int id, int err, int stat, int doneDate){
+/**
+*  \brief This function allow to send a SMS with the SMPP protocol
+*
+*  \param[in] fromMsisdn  This parameter is a MSISDN of sender
+*  \param[in] toMsisdn    This parameter is a MSISDN of receiver
+*  \param[in] message     This parameter is a message to send
+*
+*/
+bool Connection_SMPP::sendSMS(char* fromMsisdn, char* toMsisdn, char *message){//, int id, int err, int stat, int doneDate){
 	SMS sms;
 	
-	sms.src = fromPhoneNb;
-	sms.dst = toPhoneNb;
+	sms.src = fromMsisdn;
+	sms.dst = toMsisdn;
 	sms.msg = message;	
-	//sms.id  = id;
-	//sms.err =  err;
-	//sms.stat= stat;
+	//sms.id   = id;
+	//sms.err  = err;
+	//sms.stat = stat;
 	//sms.doneDate = doneDate;
-	return (bool)sendSMS(sms); 
+	return (bool)sendSMS(sms); //see : Connection_SMPP::sendSMS(SMS &sms)
 }
 
+/**
+*  \brief This function allow to send a SMS with the SMPP protocol
+*
+*  \param sms  SMS to send
+*/
 bool Connection_SMPP::sendSMS(SMS &sms){
         if(do_smpp_send_message(&sms,this->sock_tcp)){
                 cerr << "\033[0;31;40mError on the sending SMS.\033[0m" << endl;
@@ -81,20 +111,22 @@ bool Connection_SMPP::sendSMS(SMS &sms){
         }
         return (bool)true;
 }
-/*
-//utili si utilisation de thread
-void receiverSMPP(int *sock_tcp){
-	listend_smpp(*sock_tcp,1);//1 pour la verbo
-	return;
-}
+
+/**
+*  \brief This function allow to receive a SMS
+*         A timeout is configured on 250 usec
+*
+*  \param verbos  It use for enable or disable the verbosity
 */
 SMS* Connection_SMPP::receiverSMS(bool verbos){
-	return listend_smpp(sock_tcp,verbos);//1 pour la verbo
-	//int *sock = &sock_tcp;
-	//std::thread *receiver = new std::thread(receiverSMPP,sock);
-        //return (std::thread*) receiver;
+	return listend_smpp(sock_tcp,verbos);
 }
 
+/**
+*  \brief This function allow to display a SMS
+*
+*  \param sms  SMS to display 
+*/
 void Connection_SMPP::displaySMS(SMS &sms){
 	cout << "------------------------------------------------------" << endl;
 	cout << "  _______  " << endl;

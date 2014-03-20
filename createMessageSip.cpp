@@ -1,13 +1,21 @@
 /**
-*	.cppteSipMessage permet creer des trames SIP
-*
-*	@author : Mickael ROUSSE
+*	\file createMessageSip.cpp
 */
 
 #include "createMessageSip.h"
 
+/**
+*  \brief This function allow to create 'Accepted' trame SIP
+*
+*  \param ip_dst    This parameter is the IP of the SIP gateway 
+*  \param port_dst  This parameter is the Port of the SIP gateway
+*  \param ip_src    This parameter is the IP of the local SIP interface
+*  \param port_src  This parameter is the Port of the local SIP interface
+*  \param userFrom  This parameter is a MSISDN of sender 
+*  \param userTo    This parameter is a MSISDN of receiver
+* 
+*/
 string createTrameSipAccepted(string ip_dst, string port_dst, string ip_src, string port_src, string userFrom, string userTo){
-	//mettre en paramettre le FROM et le TO de la trame recu
 	string str ="SIP/2.0 202 Accepted\r\n";
         str +="Via: SIP/2.0/UDP "+ip_src+"\r\n";
         str +="From: sip:" +userFrom+ "@"+ip_src+ ":" +port_src+"\r\n";
@@ -21,11 +29,31 @@ string createTrameSipAccepted(string ip_dst, string port_dst, string ip_src, str
         str +="Content-Length: 0\r\n";
 	return str;
 }
+
+/**
+*  \brief This function allow to create 'Accepted' trame SIP
+*
+*  \param sip_msg  This parameter contain all information for send the SIP trame.    
+*
+*/
 string createTrameSipAccepted(Sip_msg &sip_msg){	
 	return createTrameSipAccepted(sip_msg.ip_dst, sip_msg.port_dst, sip_msg.ip_src,
 					 sip_msg.port_src, sip_msg.userFrom, sip_msg.userTo);
 }
 
+
+/**
+*  \brief This function allow to create 'Message' trame SIP
+*
+*  \param ip_dst    This parameter is the IP of the SIP gateway
+*  \param port_dst  This parameter is the Port of the SIP gateway
+*  \param ip_src    This parameter is the IP of the local SIP interface
+*  \param port_src  This parameter is the Port of the local SIP interface
+*  \param userFrom  This parameter is a MSISDN of sender
+*  \param userTo    This parameter is a MSISDN of receiver
+*  \param msg       This parameter is the messgae of SMS
+*
+*/
 string createTrameSipSMS(string ip_dst, string port_dst, string ip_src, string port_src, string userFrom, string userTo,string msg){
 	string uuid = "bb27bf00-6329-11e3-b17c-0002a5d5c51b";
 	string newMessage = "MESSAGE sip:"+userTo+" SIP/2.0\r\n";
@@ -50,7 +78,9 @@ string createTrameSipSMS(Sip_msg &sip_msg){
 }
 */
 
+
 /*
+//example using
 int main(){
 	string tmp;
 
