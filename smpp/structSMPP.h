@@ -5,6 +5,8 @@ extern "C"{
 #ifndef STRUCTSMPP_H
 #define STRUCTSMPP_H
 
+#include <stdlib.h>
+
 typedef struct TcpConnect{
         char host[256];
         int port;
@@ -16,18 +18,21 @@ typedef struct SmppConnect{
 	char systemType[13];
 }SmppConnect;
 
-typedef struct SMS{
+typedef struct _SMS{
 	char* src;
 	char* dst;
 	char* msg;
+	int   id;
+	int   ttl;
+	
 	/*
-	int id;
 	int err;
 	int stat;
 	int doneDate;
 	*/
 }SMS;
 
+void free_sms(SMS **sms);
 
 #endif /*STRUCTSMPP_H*/
 

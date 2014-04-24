@@ -5,8 +5,8 @@
 #define CONNECTION_SMPP_H
 
 #include <iostream>
-#include <thread>
-#include <queue>
+//#include <thread>
+//#include <queue>
 //#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>

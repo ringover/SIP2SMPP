@@ -17,13 +17,6 @@
 Boolean checkConfigIni(){
     Boolean b = TRUE;
 
-/*
-    if(mainIni.capt_device == NULL) {
-        fprintf(stderr,"\"device\" must be defined in the INI file!\n");
-        b = FALSE;
-    }
-*/
-
     if(mainIni.sip_local_ip == NULL) {
         fprintf(stderr,"\"sip_src_ip\" must be defined in the INI file!\n");
         b = FALSE;
@@ -64,6 +57,50 @@ Boolean checkConfigIni(){
         b = FALSE;
     }
 
+    if(dbmsIni.dbms_name == NULL) {
+	fprintf(stderr,"\"dbms_name\" must be defined in the INI file!\n");
+        b = FALSE;
+    }else{
+
+	if(strcmp(dbmsIni.dbms_name,"mysql")==0){
+		//MySQL
+		if(dbmsIni.db_host == NULL) {
+        		fprintf(stderr,"\"db_host\" must be defined in the INI file!\n");
+		        b = FALSE;
+		}
+
+		if(dbmsIni.db_username == NULL) {
+			fprintf(stderr,"\"db_username\" must be defined in the INI file!\n");
+		        b = FALSE;
+		}
+
+		if(dbmsIni.db_password == NULL) {
+       		 	fprintf(stderr,"\"db_password\" must be defined in the INI file!\n");
+		        b = FALSE;
+		}
+
+		if(dbmsIni.db_basename == NULL) {
+        		fprintf(stderr,"\"db_basename\" must be defined in the INI file!\n");
+		        b = FALSE;
+		}
+
+	}else if(strcmp(dbmsIni.dbms_name,"sqlite3")==0){
+		//SQLite3
+		if(dbmsIni.db_dirname == NULL) {
+        		fprintf(stderr,"\"db_dirname\" must be defined in the INI file!\n");
+		        b = FALSE;
+		}
+
+		if(dbmsIni.db_basename == NULL) {
+        		fprintf(stderr,"\"db_basename\" must be defined in the INI file!\n");
+		        b = FALSE;
+		}
+
+	}else{
+		fprintf(stderr,"\"dbms_name\" is wrong, please your choice have to be : mysql or sqlite3\n");
+		b = FALSE;
+	}
+    }
     return b;
 }
 
@@ -88,9 +125,17 @@ Boolean loadFileIni(char *conffile){
 
     char smpp_ip_ini[100]       ="127.0.0.1";
     char smpp_port_ini[100]     ="2775";
-//    char device_ini[100]        ="eth0";
     char user_smpp_ini[100]     ="user";
     char pass_smpp_ini[100]     ="pass";
+
+    char dbms_name_ini[100]     = "mysql";
+    char db_host_ini[100]       = "127.0.0.1";
+    char db_username_ini[100]   = "root";
+    char db_password_ini[100]   = "";
+    char db_basename_ini[100]   = "sip2smpp";
+    char db_dirname_ini[100]    = "/var/sqlite3/sip2smpp";
+    char db_encoding_ini[100]   = "UTF-8";
+    char db_ttl_sms_ini[100]	= "0";
 
     if(mainIni.pass_smpp)
         free(mainIni.pass_smpp);
@@ -124,11 +169,39 @@ Boolean loadFileIni(char *conffile){
         free(mainIni.sip_local_ip);
     mainIni.sip_local_ip     = NULL;
 
-    /*
-    if(mainIni.capt_device)
-        free(mainIni.capt_device);
-    mainIni.capt_device      = NULL;
-    */
+    if(dbmsIni.dbms_name)
+	free(dbmsIni.dbms_name);
+    dbmsIni.dbms_name        = NULL;
+
+    if(dbmsIni.db_host)
+	free(dbmsIni.db_host);
+    dbmsIni.db_host          = NULL;
+
+    if(dbmsIni.db_username)
+	free(dbmsIni.db_username);
+    dbmsIni.db_username      = NULL;
+
+    if(dbmsIni.db_password)
+	free(dbmsIni.db_password);
+    dbmsIni.db_password     = NULL;
+
+    if(dbmsIni.db_basename) 
+	free(dbmsIni.db_basename);
+    dbmsIni.db_basename      = NULL;
+
+    if(dbmsIni.db_dirname)
+	free(dbmsIni.db_dirname);
+    dbmsIni.db_dirname       = NULL;
+
+    if(dbmsIni.db_encoding)
+	free(dbmsIni.db_encoding);
+    dbmsIni.db_encoding      = NULL;
+
+    if(dbmsIni.db_ttl_sms)
+	free(dbmsIni.db_ttl_sms);
+    dbmsIni.db_ttl_sms       = NULL;
+
+    ///////
 
     if(mainIni.sip_dest_ip == NULL) {
 	//ini-gets return 0 or the size of Buffer (here : sip_dest_ip_ini)
@@ -203,16 +276,77 @@ Boolean loadFileIni(char *conffile){
         }
     }
 
-    /*
-    if(mainIni.capt_device == NULL) {
-        ini_gets("main", "device", "none", device_ini, sizearray(device_ini), conffile);
-        if(strcmp(device_ini, "none") != 0) {
-            mainIni.capt_device=(char*)malloc(sizeof(char)*(strlen(device_ini)+1));
-            memset(mainIni.capt_device,0,sizeof(char)*(strlen(device_ini)+1));
-            strcpy(mainIni.capt_device,device_ini);
+    if(dbmsIni.dbms_name == NULL){
+	ini_gets("dbms", "dbms_name", "none", dbms_name_ini, sizearray(dbms_name_ini), conffile);
+	if(strcmp(dbms_name_ini, "none") != 0) {
+		dbmsIni.dbms_name =(char*)malloc(sizeof(char)*(strlen(dbms_name_ini)+1));
+		memset(dbmsIni.dbms_name,0,sizeof(char)*(strlen(dbms_name_ini)+1));
+		strcpy(dbmsIni.dbms_name,dbms_name_ini);
+	}
+    }
+
+    if(dbmsIni.db_host == NULL){
+	ini_gets("dbms", "db_host", "none", db_host_ini, sizearray(db_host_ini), conffile);
+        if(strcmp(db_host_ini, "none") != 0) {
+                dbmsIni.db_host =(char*)malloc(sizeof(char)*(strlen(db_host_ini)+1));
+                memset(dbmsIni.db_host,0,sizeof(char)*(strlen(db_host_ini)+1));
+                strcpy(dbmsIni.db_host,db_host_ini);
         }
     }
-    */
+
+    if(dbmsIni.db_username == NULL){
+        ini_gets("dbms", "db_username", "none", db_username_ini, sizearray(db_username_ini), conffile);
+        if(strcmp(db_username_ini, "none") != 0) {
+                dbmsIni.db_username =(char*)malloc(sizeof(char)*(strlen(db_username_ini)+1));
+                memset(dbmsIni.db_username,0,sizeof(char)*(strlen(db_username_ini)+1));
+                strcpy(dbmsIni.db_username,db_username_ini);
+        }
+    }
+
+    if(dbmsIni.db_password == NULL){
+        ini_gets("dbms", "db_password", "none", db_password_ini, sizearray(db_password_ini), conffile);
+        if(strcmp(db_password_ini, "none") != 0) {
+                dbmsIni.db_password =(char*)malloc(sizeof(char)*(strlen(db_password_ini)+1));
+                memset(dbmsIni.db_password,0,sizeof(char)*(strlen(db_password_ini)+1));
+                strcpy(dbmsIni.db_password,db_password_ini);
+        }
+    }
+
+    if(dbmsIni.db_basename == NULL){
+        ini_gets("dbms", "db_basename", "none", db_basename_ini, sizearray(db_basename_ini), conffile);
+        if(strcmp(db_basename_ini, "none") != 0) {
+                dbmsIni.db_basename =(char*)malloc(sizeof(char)*(strlen(db_basename_ini)+1));
+                memset(dbmsIni.db_basename,0,sizeof(char)*(strlen(db_basename_ini)+1));
+                strcpy(dbmsIni.db_basename,db_basename_ini);
+        }
+    }
+
+    if(dbmsIni.db_dirname == NULL){
+        ini_gets("dbms", "db_dirname", "none", db_dirname_ini, sizearray(db_dirname_ini), conffile);
+        if(strcmp(db_dirname_ini, "none") != 0) {
+                dbmsIni.db_dirname =(char*)malloc(sizeof(char)*(strlen(db_dirname_ini)+1));
+                memset(dbmsIni.db_dirname,0,sizeof(char)*(strlen(db_dirname_ini)+1));
+                strcpy(dbmsIni.db_dirname,db_dirname_ini);
+        }
+    }
+
+    if(dbmsIni.db_encoding == NULL){
+        ini_gets("dbms", "db_encoding", "UTF-8", db_encoding_ini, sizearray(db_encoding_ini), conffile);
+        if(strcmp(db_encoding_ini, "none") != 0) {
+                dbmsIni.db_encoding =(char*)malloc(sizeof(char)*(strlen(db_encoding_ini)+1));
+                memset(dbmsIni.db_encoding,0,sizeof(char)*(strlen(db_encoding_ini)+1));
+                strcpy(dbmsIni.db_encoding,db_encoding_ini);
+        }
+    }
+
+    if(dbmsIni.db_ttl_sms == NULL){
+        ini_gets("dbms", "db_ttl_sms", "0", db_ttl_sms_ini, sizearray(db_ttl_sms_ini), conffile);
+        if(strcmp(db_ttl_sms_ini, "none") != 0) {
+                dbmsIni.db_ttl_sms =(char*)malloc(sizeof(char)*(strlen(db_ttl_sms_ini)+1));
+                memset(dbmsIni.db_ttl_sms,0,sizeof(char)*(strlen(db_ttl_sms_ini)+1));
+                strcpy(dbmsIni.db_ttl_sms,db_ttl_sms_ini);
+        }
+    }
 
     return checkConfigIni();
 }

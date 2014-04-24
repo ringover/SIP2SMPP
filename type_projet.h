@@ -29,4 +29,10 @@ typedef enum{
     TRUE=1
 }Boolean;
 
+/**
+ * use only on static variables
+ */
+#define ARRAY_SIZE(a)                   \
+        (sizeof(a) / sizeof(*(a)))
+
 #endif /*TYPE_PROJET_H*/
