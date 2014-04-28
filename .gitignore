@@ -1,12 +1,11 @@
 *~
 *.o
+*.bak
 connectionSIP
 connectionSMPP
 sip2smpp
 main
 Makefile.scan
-main.cpp.bak
-config.ini.bak
 logFile
 core
 y.tab.c

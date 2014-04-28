@@ -33,17 +33,17 @@
 #include "connectionSMPP.h"
 #include "connectionSIP.h"
 
-#include "iniFile.c"
-#include "log/log.c"
 //#include "type_projet.h"
+#include "ini/iniFile.h"
+#include "log/log.h"
 #include "smpp/structSMPP.h"
 #include "database.h"
-
-//#include "lib/daemonize/daemonize.h"
+#include "daemonize/daemonize.h"
 
 using namespace std;
 
 int running = 0;
+char* pid_file = (char*)DEFAULT_PIDFILE;
 
 /**
 *  \brief This function is a signal handler function
@@ -192,7 +192,7 @@ static void* gestionSMPP(void *data){
 					mainIni.user_smpp,mainIni.pass_smpp,BIND_TRANSCEIVER,true);
  	sem_init(&mutex_smpp, 0, 1);
 	
-	while(smpp && smpp->connect == true){
+	while(smpp && smpp->connect && running){
 		pthread_t thread_listend;
 		pthread_t thread_send;
 
@@ -201,6 +201,11 @@ static void* gestionSMPP(void *data){
 		
 		pthread_join(thread_listend,NULL);
 		pthread_join(thread_send,NULL);
+	}
+
+	if(smpp){
+		delete smpp;
+		smpp = NULL;
 	}
 	
 	sem_destroy(&mutex_smpp);
@@ -279,7 +284,7 @@ static void* gestionSIP(void *data){
 	/* initialize mutex to 1 - binary semaphore   */
 	/* second param = 0      - semaphore is local */
 
-	while( sip && sip->connect ){
+	while( sip && sip->connect && running ){
 		pthread_t thread_listend;
                 pthread_t thread_send;
 
@@ -317,9 +322,8 @@ static void* checkDB(void *data){
 *
 */
 int main(int argc,char **argv){
-    int c, nofork=0;
+    int c, nofork=1;
     char *conffile = NULL;
-
     log_init("logFile",NULL);
 
     CONSOLE(LOG_SCREEN,"%sStart\n%s",RED,NONE);
@@ -337,7 +341,7 @@ int main(int argc,char **argv){
                     //pid_file = optarg;
                     break;
             case 'f':
-                    nofork = 1;
+                    nofork = 0;
                     log2display(LOG_NONE);
                     break;
             case 'h':
@@ -373,12 +377,12 @@ int main(int argc,char **argv){
 	size_smpp = sms_count(DB_TYPE_SMPP);
     }
 
-/*
+
     if(daemonize(nofork) != 0){
         ERROR(LOG_FILE | LOG_SCREEN,"Daemoniize failed");
         exit(-1);
     }
-*/
+
 
     printf("Version          : [%s]\n", VERSION);
     printf("INI file         : [%s]\n", conffile);
@@ -473,6 +477,8 @@ int main(int argc,char **argv){
 	}
     }//End While
 	
+    running = 0;
+
     if(smpp) {
        delete smpp;
        smpp = NULL;
@@ -481,8 +487,6 @@ int main(int argc,char **argv){
        delete sip;
        sip = NULL;
     }
-
-    running = 0;
 
 //  pthread_join(transceiverSMPP,NULL);
     pthread_join(transceiverSIP,NULL);

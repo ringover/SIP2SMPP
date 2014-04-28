@@ -5,8 +5,8 @@
 
 #define VERSION             "1.0"
 #define DEFAULT_CONFIG      "/etc/sip2smpp/config.ini"
-#define DEFAULT_PIDFILE     "/var/run/sip2smpp.pid"
 #define DEFAULT_PORT        "5060"
+#define DEFAULT_PIDFILE     "/var/run/sip2smpp.pid"
 
 /**
 *    Color :
@@ -36,3 +36,4 @@ typedef enum{
         (sizeof(a) / sizeof(*(a)))
 
 #endif /*TYPE_PROJET_H*/
+

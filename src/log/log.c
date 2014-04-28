@@ -1,11 +1,34 @@
 #include "log.h"
 
+static char* LOG_FILE_PATH        = NULL;
+static FILE* P_FILE               = NULL;
+static pthread_mutex_t* P_MUTEX   = NULL;
+static Loglevel log_choice        = LOG_INFO;
+
+static void _p_printf_init(const void *p_funcion);
+static int _log_open_file(const char *path);
+static int _log_close_file(void);
+
+int (*printf_function)(const char *restrict, ...) = &printf;
+
+char* str_loglevel[]={
+	"NONE",
+	LOG_CONSOLE_STR,
+	LOG_DEBUG_STR,
+	LOG_INFO_STR,
+	LOG_NOTICE_STR,
+	LOG_WARNING_STR,
+	LOG_ERROR_STR,
+	LOG_CRIT_STR,
+	LOG_ALERT_STR
+};
+
 /**
  * \brief	This function allow to init LOG_SCREEN function.
  * 
  * \param	p_function	This parameter is a pointer function used for LOG_SCREEN (by default printf)
  */
-void _p_printf_init(const void *p_function){
+static void _p_printf_init(const void *p_function){
 	if(p_function){
 		printf_function = (int (*)(const char *restrict, ...))p_function;
 	}else{
@@ -13,6 +36,38 @@ void _p_printf_init(const void *p_function){
 	}
 	return;
 }
+
+/**
+ * \brief	Load the log file.
+ *
+ * \param	path : The parameter is the path of LOG file.
+ */
+static int _log_open_file(const char *path){
+	if(path && !P_FILE){
+		LOG_FILE_PATH = strdup(path);
+		P_FILE        = fopen(LOG_FILE_PATH,"a");
+		return 0;
+	}else{
+		ERROR(LOG_FILE | LOG_SCREEN,"Path is not correct or a file is already open");
+	}
+	return -1;
+}
+
+/**
+ * \brief	Close the log file.
+ */
+static int _log_close_file(void){
+	if(P_FILE){
+		fclose(P_FILE);
+		P_FILE = NULL;
+	}
+	if(LOG_FILE_PATH){
+		free(LOG_FILE_PATH);
+		LOG_FILE_PATH = NULL;
+	}
+	return 0;
+}
+
 
 /**
  * \brief	Display every LOG level more smaller l.
@@ -39,37 +94,6 @@ int log_change_file(const char *path){
 
 	}
 	return -1;
-}
-
-/**
- * \brief	Load the log file.
- *
- * \param	path : The parameter is the path of LOG file.
- */
-int _log_open_file(const char *path){
-	if(path && !P_FILE){
-		LOG_FILE_PATH = strdup(path);
-		P_FILE        = fopen(LOG_FILE_PATH,"a");
-		return 0;
-	}else{
-		ERROR(LOG_FILE | LOG_SCREEN,"Path is not correct or a file is already open");
-	}
-	return -1;
-}
-
-/**
- * \brief	Close the log file.
- */
-int _log_close_file(void){
-	if(P_FILE){
-		fclose(P_FILE);
-		P_FILE = NULL;
-	}
-	if(LOG_FILE_PATH){
-		free(LOG_FILE_PATH);
-		LOG_FILE_PATH = NULL;
-	}
-	return 0;
 }
 
 /**
@@ -118,22 +142,22 @@ int log_destroy(void){
  * \param	line	This parameter is line number
  * \param	buff	This parameter is buffer of log
  */
-void log_hook(Loglevel lvl, unsigned int display,pthread_t tid,pid_t pid, const char* func, const char* file, int line, const char* buff){
+void log_hook(Loglevel lvl, unsigned int display, pthread_t tid, pid_t pid, const char* func, const char* file, unsigned int line, const char* buff){
 	if(P_MUTEX) pthread_mutex_lock(P_MUTEX);
 	if( (lvl >= LOG_CONSOLE || lvl <= LOG_ALERT) && buff){
 		if(tid != 0){
 		   if( (display & LOG_SCREEN) != 0 && log_choice >= lvl ){
-			printf_function("%s [%lx/%u] [%s,%s:%d] %s\n",_str_loglevel[lvl],tid,pid,file,func,line,buff);
+			printf_function("%s [%lx/%u] [%s,%s:%d] %s\n",str_loglevel[lvl],tid,pid,file,func,line,buff);
 		   }
 		   if( (display & LOG_FILE) != 0 && P_FILE ){
-			fprintf(P_FILE,"%s [%lx/%u] [%s,%s:%d] %s\n",_str_loglevel[lvl],tid,pid,file,func,line,buff);
+			fprintf(P_FILE,"%s [%lx/%u] [%s,%s:%d] %s\n",str_loglevel[lvl],tid,pid,file,func,line,buff);
 		   }
 		}else{
 		   if( (display & LOG_SCREEN) != 0 && log_choice >= lvl ){
-			printf_function("%s [%u] [%s,%s:%d] %s\n",_str_loglevel[lvl],pid,file,func,line,buff);
+			printf_function("%s [%u] [%s,%s:%d] %s\n",str_loglevel[lvl],pid,file,func,line,buff);
 		   }
 		   if( (display & LOG_FILE) != 0 && P_FILE ){
-			fprintf(P_FILE,"%s [%u] [%s,%s:%d] %s\n",_str_loglevel[lvl],pid,file,func,line,buff);
+			fprintf(P_FILE,"%s [%u] [%s,%s:%d] %s\n",str_loglevel[lvl],pid,file,func,line,buff);
 		   }
 		}
 	}

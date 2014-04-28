@@ -18,7 +18,7 @@ extern "C"{
 
 #include "smpp/structSMPP.h"
 #include "type_projet.h"
-#include "iniFile.h"
+#include "ini/iniFile.h"
 
 typedef enum _db_type{
         DB_TYPE_SMPP = 1,
