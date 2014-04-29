@@ -56,8 +56,8 @@ This program works well in screen.
 ##ROADMAP
 
 v2.0 :
-* database implementation replacing the fifo smpp et sip message
+** database implementation replacing the fifo smpp et sip message
 * add a reload SIP, SMPP, CONF module
-* change log level
-* add a daemon mode
+** change log level
+** add a daemon mode
  

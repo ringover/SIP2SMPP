@@ -38,7 +38,7 @@ int daemonize(int nofork){
             ERROR(LOG_SCREEN|LOG_FILE,"Running process found in the pid file %s",pid_file);
             return -1;
          }else{
-            ERROR(LOG_SCREEN|LOG_FILE,"Pid file contains old pid, replacing pid");
+            INFO(LOG_SCREEN|LOG_FILE,"Pid file contains old pid, replacing pid");
          }
       }
       pid=getpid();

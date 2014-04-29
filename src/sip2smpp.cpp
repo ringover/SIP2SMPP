@@ -11,10 +11,7 @@
 */
 
 #include <iostream>
-//#include <thread>
 #include <queue>
-
-#include <pthread.h>
 
 #include <sys/cdefs.h>
 #include <sys/types.h>
@@ -28,6 +25,7 @@
 #include <getopt.h>
 #include <sstream>
 
+#include <pthread.h>
 #include <semaphore.h>
 
 #include "connectionSMPP.h"
@@ -52,8 +50,7 @@ char* pid_file = (char*)DEFAULT_PIDFILE;
 *
 */
 void handler(int value){
-    ERROR(LOG_FILE,"The process has been terminated");
-    CONSOLE(LOG_SCREEN,"%sEnd\n%s",RED,NONE);
+    INFO(LOG_SCREEN | LOG_FILE,"The process has been terminated");
     log_destroy();
     exit(value);
 }
@@ -65,16 +62,16 @@ void handler(int value){
 *
 */
 void usage(int8_t value){
-    printf("%sHelp :%s\n",RED,NONE);
+    printf("%sHelp :%s\n", RED, END_COLOR);
 
-    printf("Sip2Smpp [-f file.conf] [option -P file.pid] \n");
-    printf("   -h  help\n");
-    printf("   -v  show version\n");
-    printf("   -f  use fork (parameter 1) | Not implemented\n");
-    //printf("   -P  PID file. Default PID file is [%s]\n",DEFAULT_PIDFILE);
-    printf("   -c  config file to use to specify some options. Default location is [%s]\n",DEFAULT_CONFIG);
-    printf("   -l  log file to use to specify some options. Default location is [%s]\n",DEFAULT_CONFIG);
-    printf("%s",NONE);
+    printf("sip2smpp [%soptions%s]  \n", CYAN, END_COLOR);
+    printf("%s    -h  %s: help\n", CYAN, END_COLOR);
+    printf("%s    -v  %s: show version\n", CYAN, END_COLOR);
+    printf("%s    -D  %s: debug level (0-8)\n", CYAN, END_COLOR);
+    printf("%s    -f  %s: use fork (parameter 1) | Not implemented\n", CYAN, END_COLOR);
+    printf("%s    -P  %s: PID file. Default PID file is [%s]\n", CYAN, END_COLOR, DEFAULT_PIDFILE);
+    printf("%s    -c  %s: config file to use to specify some options. Default location is [%s]\n", CYAN, END_COLOR, DEFAULT_CONFIG);
+    printf("%s    -l  %s: log file to use to specify some options. Default location is [%s]\n", CYAN, END_COLOR, DEFAULT_CONFIG);
 
     handler(value);
 }
@@ -188,8 +185,8 @@ static void* gestionSMPP_listend(void *data){
 *  \brief This function is used for managed all input and output SMPP trafic
 */
 static void* gestionSMPP(void *data){
-	smpp = new Connection_SMPP(mainIni.smpp_server_ip,mainIni.smpp_server_port,
-					mainIni.user_smpp,mainIni.pass_smpp,BIND_TRANSCEIVER,true);
+	smpp = new Connection_SMPP(smppConnectIni.smpp_server_ip,smppConnectIni.smpp_server_port,
+			smppConnectIni.user_smpp,smppConnectIni.pass_smpp,BIND_TRANSCEIVER,true);
  	sem_init(&mutex_smpp, 0, 1);
 	
 	while(smpp && smpp->connect && running){
@@ -255,13 +252,14 @@ static void* gestionSIP_send(void *data){
 			return 0;
 		}
 		
-		string str = createTrameSipSMS(mainIni.sip_dest_ip,mainIni.sip_dest_port,
-				mainIni.sip_local_ip,mainIni.sip_local_port,sms->dst,sms->src,sms->msg);
+		string str = createTrameSipSMS(sipDestIni.sip_dest_ip, sipDestIni.sip_dest_port,
+					sipLocalIni.sip_local_ip, sipLocalIni.sip_local_port,
+					sms->dst, sms->src, sms->msg);
 		
 		if(str.size()>0){
 			//cout << "mainIni.sip_dest_ip   = " << mainIni.sip_dest_ip << endl;
 			//cout << "mainIni.sip_dest_port = " << mainIni.sip_dest_port << endl;
-			sip->sendSIP(str,mainIni.sip_dest_ip,mainIni.sip_dest_port);
+			sip->sendSIP(str, sipDestIni.sip_dest_ip, sipDestIni.sip_dest_port);
 			//sms_cls(sms);
 			sms_rm(sms);
 			size_sip--;
@@ -279,7 +277,7 @@ static void* gestionSIP_send(void *data){
 *  \brief This function is used for managed all input and output SIP trafic
 */
 static void* gestionSIP(void *data){
-	sip = new Connection_SIP(mainIni.sip_local_ip,mainIni.sip_local_port,SIP_TRANSCEIVER,true);
+	sip = new Connection_SIP(sipLocalIni.sip_local_ip,sipLocalIni.sip_local_port,SIP_TRANSCEIVER,true);
  	sem_init(&mutex_sip, 0, 1);
 	/* initialize mutex to 1 - binary semaphore   */
 	/* second param = 0      - semaphore is local */
@@ -325,20 +323,19 @@ int main(int argc,char **argv){
     int c, nofork=1;
     char *conffile = NULL;
     log_init("logFile",NULL);
+    log2display(LOG_NONE);
 
-    CONSOLE(LOG_SCREEN,"%sStart\n%s",RED,NONE);
-
-    while((c=getopt(argc, argv, "c:vp:fh"))!=-1) {//: quand il y a un paramettre
+    while((c=getopt(argc, argv, "c:vp:fhD:"))!=-1) {
         switch(c) {
             case 'c':
                     conffile = optarg;
                     break;
             case 'v':
-                    printf("version: %s\n", VERSION);
+                    printf("sip2smpp version: %s\n", VERSION);
                     exit(0);
                     break;
             case 'P':
-                    //pid_file = optarg;
+                    pid_file = optarg;
                     break;
             case 'f':
                     nofork = 0;
@@ -347,6 +344,15 @@ int main(int argc,char **argv){
             case 'h':
                     usage(0);
                     break;
+	    case 'D':
+                    {
+                      char log = atoi(optarg);
+                      if(log >= 0 && log <= 8){
+                         printf("%d\n",log);
+                         log2display((Loglevel)log);
+                      }
+                      break;
+                    }
             default:
                     abort();
         }
@@ -364,7 +370,7 @@ int main(int argc,char **argv){
         handler(-1);
     }
 
-    if(!loadFileIni(conffile)){
+    if(!loadFileIni(conffile,SECTION_ALL)){
         ERROR(LOG_FILE | LOG_SCREEN,"There are errors in the INI file!");
         handler(-1);
     }
@@ -377,27 +383,25 @@ int main(int argc,char **argv){
 	size_smpp = sms_count(DB_TYPE_SMPP);
     }
 
+    printf("%sVersion          %s: [%s]\n", GREEN, END_COLOR, VERSION);
+    printf("%sPid file         %s: [%s]\n", GREEN, END_COLOR, pid_file);
+    printf("-------     %s     -------\n" , conffile);
+    printf("%sSIP dest IP      %s: [%s]\n", GREEN, END_COLOR, sipDestIni.sip_dest_ip);
+    printf("%sSIP dest Port    %s: [%s]\n", GREEN, END_COLOR, sipDestIni.sip_dest_port);
+    printf("%sSIP Local IP     %s: [%s]\n", GREEN, END_COLOR, sipLocalIni.sip_local_ip);
+    printf("%sSIP Local Port   %s: [%s]\n", GREEN, END_COLOR, sipLocalIni.sip_local_port);
+    printf("\n");
+    printf("%sSMPP Server IP   %s: [%s]\n", GREEN, END_COLOR, smppConnectIni.smpp_server_ip);
+    printf("%sSMPP Server Port %s: [%s]\n", GREEN, END_COLOR, smppConnectIni.smpp_server_port);
+    printf("\n");
+    printf("%sDBMS             %s: [%s]\n", GREEN, END_COLOR, dbmsIni.dbms_name);
+    printf("%sDB dir name      %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_dirname);
+    printf("%sDB base name     %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_basename);
 
     if(daemonize(nofork) != 0){
         ERROR(LOG_FILE | LOG_SCREEN,"Daemoniize failed");
         exit(-1);
     }
-
-
-    printf("Version          : [%s]\n", VERSION);
-    printf("INI file         : [%s]\n", conffile);
-    printf("------------------\n", conffile);
-    printf("SIP dest IP      : [%s]\n", mainIni.sip_dest_ip);
-    printf("SIP dest Port    : [%s]\n", mainIni.sip_dest_port);
-    printf("SIP Local IP     : [%s]\n", mainIni.sip_local_ip);
-    printf("SIP Local Port   : [%s]\n", mainIni.sip_local_port);
-
-    printf("SMPP Server IP   : [%s]\n", mainIni.smpp_server_ip);
-    printf("SMPP Server Port : [%s]\n", mainIni.smpp_server_port);
-//  printf("Pid file         : [%s]\n", pid_file);
-    printf("DBMS             : [%s]\n", dbmsIni.dbms_name);
-    printf("DB dir name      : [%s]\n", dbmsIni.db_dirname);
-    printf("DB base name     : [%s]\n", dbmsIni.db_basename);
 
 //  pthread_t transceiverSMPP;
     pthread_t transceiverSIP;
@@ -412,15 +416,13 @@ int main(int argc,char **argv){
     while(str != "shutdown"){
 	cin >> str;
 	if(str == "help"){
-		cout << "List of commands :"                                       << endl;
-		cout << "  help        : display the commands"                     << endl;
-		cout << "  sms         : create a SMS to send"                     << endl;
-		cout << "  size_list   : display the sizes of list SMS"            << endl;
-		cout << "  reload sip  : NOT IMPLEMENTED : reload sip connection"  << endl;
-		cout << "  reload smpp : NOT IMPLEMENTED : reload smpp connection" << endl;
-		cout << "  reload conf : NOT IMPLEMENTED : reload the INI file"    << endl;
-		cout << "  loglvl      : NOT IMPLEMENTED : choice the log level"   << endl;
-		cout << "  shutdown    : exit the program"                         << endl;
+		cout << "List of commands :"                            << endl;
+		cout << "  help        : display the commands"          << endl;
+		cout << "  sms         : create a SMS to send"          << endl;
+		cout << "  size_list   : display the sizes of list SMS" << endl;
+		cout << "  reload_conf : configuration file"            << endl;
+		cout << "  log         : choice the log level"          << endl;
+		cout << "  shutdown    : exit the program"              << endl;
 	}
 	if(str == "sms"){
 		short i = 1;
@@ -448,8 +450,8 @@ int main(int argc,char **argv){
 		cout << "size_smpp    : " << size_smpp    << endl;
 		cout << "size_sip     : " << size_sip     << endl;
 	}
-	if(str == "reload_sip"){
-	   if(!loadFileIni(conffile)){
+	if(str == "reload_conf"){
+	   if(!loadFileIni(conffile,SECTION_ALL)){
 	        ERROR(LOG_FILE | LOG_SCREEN,"There are errors in the INI file!\n");
 	   }else{
 		if(sip){
@@ -458,22 +460,19 @@ int main(int argc,char **argv){
 		}
 	   	sleep(1);
            	pthread_create(&transceiverSIP,NULL,gestionSIP,NULL);
-	   }
-	}
-	if(str == "reload_smpp"){
-    		if(!loadFileIni(conffile)){
-		        ERROR(LOG_FILE | LOG_SCREEN,"There are errors in the INI file!");
-		}else{
-/*			if(smpp){
-				delete smpp;
-				smpp = NULL;
-			}
-			sleep(1);
-        		pthread_create(&transceiverSMPP,NULL,gestionSMP,NULL);
+/*		if(smpp){
+			delete smpp;
+			smpp = NULL;
+		}
+		sleep(1);
+        	pthread_create(&transceiverSMPP,NULL,gestionSMP,NULL);
 */		}
 	}
-	if(str == "shutdown"){
-		cout << "Bey" << endl;
+	if(str == "log"){
+		int lvl = 0;
+		printf("log lvl : ");
+		scanf("%d", &lvl);
+		log2display((Loglevel)lvl);
 	}
     }//End While
 	
@@ -491,6 +490,8 @@ int main(int argc,char **argv){
 //  pthread_join(transceiverSMPP,NULL);
     pthread_join(transceiverSIP,NULL);
     pthread_join(checkDBconnection,NULL);
+
+    freeFileIni(SECTION_ALL);
 
     handler(0);
     return 0;

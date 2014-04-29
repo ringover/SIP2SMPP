@@ -49,34 +49,26 @@ int db_init(void){
 	dbi_initialize(NULL);
 
 	if(!dbmsIni.dbms_name){
-		printf("Failed to create connection.\n");
+		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection.");
                 return -1;	
 	}
 	if(strcmp(dbmsIni.dbms_name,"sqlite3")!=0){
-		printf("Only SQLite3 is supported.\n");
+		ERROR(LOG_SCREEN | LOG_FILE,"Only SQLite3 is supported.");
 		return -1;
 	}
-	printf("Connection to %s server...\n",dbmsIni.dbms_name);
 
 	conn = dbi_conn_new(dbmsIni.dbms_name);
 	
 	if(conn == NULL) {
-		printf("Failed to create connection.\n");
+		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection with %s.",dbmsIni.dbms_name);
 		return -1;
 	}
+	INFO(LOG_SCREEN,"Connection to %s server is established.",dbmsIni.dbms_name);
 	
 	dbi_conn_error_handler(conn, db_error_func, NULL);
 	
-/*	if(strcmp(dbmsIni.dbms_name,"mysql")==0){
-		dbi_conn_set_option(conn, "host"    , dbmsIni.db_host);
-		dbi_conn_set_option(conn, "username", dbmsIni.db_username);
-		dbi_conn_set_option(conn, "password", dbmsIni.db_password);
-		dbi_conn_set_option(conn, "dbname"  , dbmsIni.db_basename);
-		dbi_conn_set_option(conn, "encoding", dbmsIni.db_encoding);
-	}else if(strcmp(dbmsIni.dbms_name,"sqlite3")==0){*/
-		dbi_conn_set_option(conn, "sqlite3_dbdir" , dirname(dbmsIni.db_dirname));
-		dbi_conn_set_option(conn, "dbname"        , basename(dbmsIni.db_basename));
-//	}
+	dbi_conn_set_option(conn, "sqlite3_dbdir" , dirname(dbmsIni.db_dirname));
+	dbi_conn_set_option(conn, "dbname"        , basename(dbmsIni.db_basename));
 	
 	if(dbi_conn_connect(conn) < 0){
 		return -1;
@@ -93,27 +85,15 @@ int db_close(void){
 
 int db_prepare(void){
 	dbi_result result;
-	int i;
 	
-	for(i=0;i<ARRAY_SIZE(create_stmts);i++){
-		result = dbi_conn_query(conn, create_stmts[i]);
-		if(!result){
-			printf("Failed to create some table : %s\n", create_stmts[i]);
-			return -1;
-		}/*else{
-			printf("%s\n",create_stmts[i]);
-		}*/
-		dbi_result_free(result);
+	result = dbi_conn_query(conn, create_stmts);
+	if(!result){
+	   DEBUG(LOG_SCREEN | LOG_FILE,"Failed to create this table OR already created : %s", create_stmts);
 	}
+	dbi_result_free(result);
 
 	return 0;
 }
-
-/*unsigned int unique_id(void){
-	struct timeval time;
-	gettimeofday(&time,NULL);
-	return labs((time.tv_sec)+(time.tv_usec*rand()));
-}*/
 
 /**
  * Function Query
@@ -123,13 +103,14 @@ int db_select_sms_send(db_type type, db_pending pending, SMS *sms){
 	dbi_result result = NULL;
 
 	if(!sms){
-		printf("SMS failed ... The query does not apply\n");
+		DEBUG(LOG_SCREEN | LOG_FILE,"SMS failed ... The query does not apply\n");
 		return -1;
 	}
 	
 	result = dbi_conn_queryf(conn, query_select_sms_send, type, pending);
+		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...%s",query_select_sms_send, type, pending);
 	if(!result){
-		printf("Query failed ...\n");
+		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...%s",query_select_sms_send, type, pending);
 		return -1;
 	}
 	
@@ -139,7 +120,7 @@ int db_select_sms_send(db_type type, db_pending pending, SMS *sms){
 		sms->msg = dbi_result_get_string_copy(result,"msg");
 		sms->ttl = dbi_result_get_int(result,"ttl");
 		sms->id  = dbi_result_get_int(result,"id");
-		printf("id: %d | pending: %d |%s -> %s : %s\n",sms->id,pending,sms->src,sms->dst,sms->msg);
+		DEBUG(LOG_SCREEN | LOG_FILE,"id: %d | pending: %d |%s -> %s : %s\n",sms->id,pending,sms->src,sms->dst,sms->msg);
 	}
 	
 	dbi_result_free(result);
@@ -152,14 +133,14 @@ SMS* db_select_sms_send_id(int id){
 	memset(sms,0,sizeof(SMS)*1);
 	
 	if(id<=0){
-		printf("ID wrong ... The query does not apply\n");
+		DEBUG(LOG_SCREEN | LOG_FILE,"ID wrong ... The query does not apply");
 		free(sms);
 		return NULL;
 	}
 
 	result = dbi_conn_queryf(conn, query_select_sms_send_id, id);
 	if(!result){
-		printf("Query failed ...\n");
+		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...\n");
 		free(sms);
 		return NULL;
 	}
@@ -172,7 +153,7 @@ SMS* db_select_sms_send_id(int id){
 		sms->id  = dbi_result_get_int(result,"id");
 
 		int pending = dbi_result_get_int(result,"pending");
-		printf("id: %d | pending: %d |%s -> %s : %s\n",sms->id,pending,sms->src,sms->dst,sms->msg);
+		DEBUG(LOG_SCREEN | LOG_FILE,"id: %d | pending: %d |%s -> %s : %s",sms->id,pending,sms->src,sms->dst,sms->msg);
 	}
 	
 	dbi_result_free(result);
@@ -184,13 +165,13 @@ int db_count_sms_send(db_type type){
 	int count = 0;
 
 	if(!(type == DB_TYPE_SIP || type == DB_TYPE_SMPP)){
-		printf("SMS failed ... The query does not apply\n");
+		DEBUG(LOG_SCREEN | LOG_FILE,"The query does not apply");
 		return -1;
 	}
 	
 	result = dbi_conn_queryf(conn, query_count_sms_send, type);
 	if(!result){
-		printf("Query failed ...\n");
+		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...");
 		return -1;
 	}
 	
@@ -206,14 +187,14 @@ int db_insert_sms_send(db_pending pending, db_type type, const char *src, const 
 	dbi_result result;
 
 	if(!src || !dst || !msg){
-		printf("SMS failed ... The query does not apply\n");
+		DEBUG(LOG_SCREEN | LOG_FILE,"The query does not apply");
 		return -1;
 	}
 	
 	result = dbi_conn_queryf(conn,query_insert_sms_send,type,dbmsIni.db_ttl_sms,pending,src,dst,msg);
 	
 	if(!result){
-		printf("Query failed...\n");
+		ERROR(LOG_SCREEN | LOG_FILE,"Query failed...");
 	}
 
 	dbi_result_free(result);
@@ -223,7 +204,7 @@ int db_insert_sms_send(db_pending pending, db_type type, const char *src, const 
 int db_update_sms_send(db_pending pending, SMS *sms){
 	dbi_result result;
 	
-	printf("db_ttl_sms = %s\n",dbmsIni.db_ttl_sms);
+	DEBUG(LOG_SCREEN | LOG_FILE,"db_ttl_sms = %s",dbmsIni.db_ttl_sms);
 
 	if(strcmp(dbmsIni.db_ttl_sms,"0") != 0){
 		if(--(sms->ttl) <= 0){
@@ -232,7 +213,7 @@ int db_update_sms_send(db_pending pending, SMS *sms){
 		}
 	}
 	if(!sms || (sms->id)==0){
-		printf("SMS failed ... The query does not apply\n");
+		DEBUG(LOG_SCREEN | LOG_FILE,"The query does not apply");
 		return -1;
 	}
 	
@@ -241,7 +222,7 @@ int db_update_sms_send(db_pending pending, SMS *sms){
 	result = dbi_conn_queryf(conn,query_update_sms_send,pending,sms->ttl,sms->id);
 
 	if(!result){
-                printf("Query failed...\n");
+                ERROR(LOG_SCREEN | LOG_FILE,"Query failed...");
 		return -1;
         }
 
@@ -253,14 +234,14 @@ int db_delete_sms_send(const SMS *sms){
 	dbi_result result;
 	
 	if(!sms || (sms->id)==0){
-		printf("SMS failed ... The query does not apply\n");
+		DEBUG(LOG_SCREEN | LOG_FILE,"The query does not apply");
 		return -1;
 	}
 
 	result = dbi_conn_queryf(conn,query_delete_sms_send,sms->id);
 
 	if(!result){
-                printf("Query failed...\n");
+                ERROR(LOG_SCREEN | LOG_FILE,"Query failed...");
 		return -1;
         }
 
@@ -351,7 +332,7 @@ int main(){
 	db_encoding = (char*) malloc(sizeof(char)*20);
 	db_encoding = "UTF-8";
 	
-	printf("The DB have %lu table(s)\n",ARRAY_SIZE(create_stmts));
+	printf("The DB have %lu table(s)\n",sizearray(create_stmts));
 //	printf("%u\n", unique_id());
 
 	db_init();

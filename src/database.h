@@ -17,6 +17,7 @@ extern "C"{
 #include <dbi/dbi.h>
 
 #include "smpp/structSMPP.h"
+#include "log/log.h"
 #include "type_projet.h"
 #include "ini/iniFile.h"
 
@@ -38,7 +39,7 @@ static dbi_conn *conn    = NULL;
 /**
  * Statement DB
  */
-static char *create_stmts[] = {
+static char *create_stmts = {
         "CREATE TABLE IF NOT EXISTS sms_send ("
                 "id INTEGER PRIMARY KEY, "
                 "type TINYINT, "                //type         : 1=SMPP    | 2=SIP
@@ -47,7 +48,7 @@ static char *create_stmts[] = {
                 "src VARCHAR(50), "
                 "dst VARCHAR(50), "
                 "msg VARCHAR(200)"
-                ")",
+                ")"
         };
 
 
