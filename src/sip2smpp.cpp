@@ -34,7 +34,7 @@
 //#include "type_projet.h"
 #include "ini/iniFile.h"
 #include "log/log.h"
-#include "smpp/structSMPP.h"
+#include "net/smpp/struct_smpp.h"
 #include "database.h"
 #include "daemonize/daemonize.h"
 

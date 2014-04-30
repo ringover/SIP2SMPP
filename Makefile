@@ -2,16 +2,19 @@ NAME = sip2smpp
 
 include Makefile.defs
 
-subdirs = src
+CONFIG_OBJ = OBJ
+
+cleandirs = src OBJ
 program_name = sip2smpp
-OBJ = src/*.o src/*/*.o
 
-make: $(OBJ)
-	$(LD) $(CXXFLASG) $(OBJ) -o $(program_name) $(ARFLAGS)
+#problem with first make
 
-%.o:
+make:
+	$(LD) $(CXXFLASG) $(CONFIG_OBJ)/*.o -o $(program_name) $(ARFLAGS)
+	-@if [ ! -d "$(CONFIG_OBJ)" ]; then \
+		mkdir $(CONFIG_OBJ) ; \
+	fi ;
 	make -C src
-
 
 install:
 	cp -f $(program_name) /usr/bin/
@@ -23,7 +26,7 @@ install:
 
 clean:
 	-@rm -f *.o
-	-@for r in $(subdirs) "" ; do \
+	-@for r in $(cleandirs) "" ; do \
 		if [ -n "$$r" ]; then \
 			echo "making $$r" ; \
 			$(MAKE) -C $$r clean ; \

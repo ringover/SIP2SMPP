@@ -8,7 +8,7 @@
 
 #include <iostream>
 #include <sstream>
-#include "sip/sipStruct.h"
+#include "net/sip/sipStruct.h"
 using namespace std;
 
 	string createTrameSipAccepted(string ip_dst, string port_dst, string ip_src,

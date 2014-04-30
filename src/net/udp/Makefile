@@ -1,9 +1,9 @@
-include ../../Makefile.defs
+include ../../../Makefile.defs
 
-CONFIG_OBJ = ../../OBJ
+CONFIG_OBJ = ../../../OBJ
 
 SRC= $(wildcard *.c)
-OBJ += $(SRC:.c=.o)
+OBJ += $(SRC:.c=.o) 
 
 make: $(OBJ)
 

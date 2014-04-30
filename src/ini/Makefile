@@ -1,11 +1,14 @@
 include ../../Makefile.defs
 
-OBJ = iniFile.o
+CONFIG_OBJ = ../../OBJ
+
+SRC= $(wildcard *.c)
+OBJ += $(SRC:.c=.o)
 
 make: $(OBJ)
 
 %o: %c
-	$(CC) -c $^ -o $@ $(CFLAGS)
+	$(CC) -c $^ -o $(CONFIG_OBJ)/$@ $(CFLAGS)
         
 install:
         

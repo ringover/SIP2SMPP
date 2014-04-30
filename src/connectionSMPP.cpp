@@ -17,17 +17,14 @@
 *  \param verbos      It use for enable or disable the verbosity
 *
 */
-Connection_SMPP::Connection_SMPP(string server_ip, string server_port, string user_smpp, string pass_smpp, int bind, bool verbos){
+Connection_SMPP::Connection_SMPP(char *server_ip, char *server_port, string user_smpp, string pass_smpp, int bind, bool verbos){
 	cout << "\033[0;33;40mLoading SMPP \033[0m";
 	this->verbos = verbos;
 	this->bind = bind;
 	this->connect = false;
 	cout << "\033[0;33;40m..\033[0m";
 	
-	TcpConnect conn_tcp;
-	sprintf(conn_tcp.host,"%s",server_ip.c_str());
-	conn_tcp.port = atoi((char*)server_port.c_str());
-	if(do_tcp_connect(conn_tcp, &sock_tcp)){
+	if(do_tcp_connect(&sock_tcp, (char*)server_ip, atoi(server_port)) != 0){
         	cerr << "\033[0;31;40mError in tcp connect.\033[0m" << endl;
 		exit(-1);
 	}

@@ -13,9 +13,9 @@
 #include <unistd.h>
 #include <string.h>
 
-#include "smpp/tcp.h"
-#include "smpp/smpp.h"
-#include "smpp/structSMPP.h"
+#include "net/tcp/tcp.h"
+#include "net/smpp/smpp.h"
+#include "net/smpp/struct_smpp.h"
 #include <smpp34.h>
 #include <smpp34_structs.h>
 #include <smpp34_params.h>
@@ -38,7 +38,7 @@ class Connection_SMPP{
 		/**
 		*	Contructor/Destructor
 		*/
-		Connection_SMPP(string server_ip, string server_port, string user_smpp, string pass_smpp, int bind, bool verbos);
+		Connection_SMPP(char *server_ip, char *server_port, string user_smpp, string pass_smpp, int bind, bool verbos);
 		~Connection_SMPP(void);
 	
 		int getSocket(){

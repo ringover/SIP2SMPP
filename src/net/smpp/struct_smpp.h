@@ -7,11 +7,6 @@ extern "C"{
 
 #include <stdlib.h>
 
-typedef struct TcpConnect{
-        char host[256];
-        int port;
-}TcpConnect;
-
 typedef struct SmppConnect{
 	char systemId[16];
 	char password[9];
@@ -31,8 +26,6 @@ typedef struct _SMS{
 	int doneDate;
 	*/
 }SMS;
-
-void free_sms(SMS **sms);
 
 #endif /*STRUCTSMPP_H*/
 

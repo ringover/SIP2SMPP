@@ -6,8 +6,8 @@
 
 
 #include <iostream>
-#include "sip/sipStruct.h"
-#include "sip/udp_methode.h"
+#include "net/sip/sipStruct.h"
+#include "net/udp/udp_methode.h"
 
 using namespace std;
 

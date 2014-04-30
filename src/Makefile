@@ -1,22 +1,27 @@
 include ../Makefile.defs
 
-subdirs = daemonize ini log sip smpp 
-OBJ = sip2smpp.o connectionSIP.o connectionSMPP.o createMessageSip.o database.o parseSip.o
+CONFIG_OBJ = ../OBJ
+
+subdirs = daemonize ini log net 
+
+SRC = $(wildcard *.c*)
+OBJ += $(SRC:.c=.o) $(SRC:.cpp=.o)
 
 make: $(OBJ)
 #	$(LD) $(CXXFLASG) $(NAME).cpp $(OBJ) -o $(NAME) $(ARFLAGS)
 
 %o: %c
-	$(CC) -c $^ -o $@ $(CFLAGS)
+	$(CC) -c $^ -o $(CONFIG_OBJ)/$@ $(CFLAGS)
 %o: %cpp
-	$(CXX) -c $^ -o $@ $(CXXFLAGS)
+	$(CXX) -c $^ -o $(CONFIG_OBJ)/$@ $(CXXFLAGS)
 
 %.o:
-	make -C daemonize
-	make -C ini
-	make -C log
-	make -C sip
-	make -C smpp
+	-@for r in $(subdirs) "" ; do \
+                if [ -n "$$r" ]; then \
+			echo "Making $$r" ; \
+                        $(MAKE) -C $$r ; \
+                fi ; \
+        done
 
 
 install:

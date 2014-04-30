@@ -16,7 +16,7 @@ extern "C"{
 #include <math.h>
 #include <dbi/dbi.h>
 
-#include "smpp/structSMPP.h"
+#include "net/smpp/struct_smpp.h"
 #include "log/log.h"
 #include "type_projet.h"
 #include "ini/iniFile.h"

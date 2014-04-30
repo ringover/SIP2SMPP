@@ -22,7 +22,7 @@ extern "C"{
 #include <smpp34_structs.h>
 #include <smpp34_params.h>
 
-#include "structSMPP.h"
+#include "struct_smpp.h"
 /*
 extern int  smpp34_errno;
 extern char smpp34_strerror[2048];
@@ -47,6 +47,8 @@ int do_smpp_send_message(SMS *p, int sock_tcp);
 SMS* listend_smpp(int sock_tcp, int verbose);
 
 int do_smpp_close(int sock_tcp);
+
+void free_sms(SMS **sms);
 
 #endif
 
