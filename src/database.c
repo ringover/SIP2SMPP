@@ -47,7 +47,7 @@ void db_error_func(dbi_conn conn, void *data){
 
 int db_init(void){
 	dbi_initialize(NULL);
-
+	
 	if(!dbmsIni.dbms_name){
 		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection.");
                 return -1;	
@@ -61,19 +61,21 @@ int db_init(void){
 	
 	if(conn == NULL) {
 		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection with %s.",dbmsIni.dbms_name);
+		INFO( LOG_SCREEN | LOG_FILE,"db_dirname  = %s",dbmsIni.db_dirname);
+		INFO( LOG_SCREEN | LOG_FILE,"db_basename = %s",dbmsIni.db_basename);
 		return -1;
 	}
-	INFO(LOG_SCREEN,"Connection to %s server is established.",dbmsIni.dbms_name);
 	
 	dbi_conn_error_handler(conn, db_error_func, NULL);
-	
-	dbi_conn_set_option(conn, "sqlite3_dbdir" , dirname(dbmsIni.db_dirname));
+
+	dbi_conn_set_option(conn, "sqlite3_dbdir" , dirname( dbmsIni.db_dirname ));
 	dbi_conn_set_option(conn, "dbname"        , basename(dbmsIni.db_basename));
-	
+
 	if(dbi_conn_connect(conn) < 0){
 		return -1;
 	}
 	
+	INFO(LOG_SCREEN,"Connection to %s server is established.",dbmsIni.dbms_name);
 	return db_prepare();
 }
 
@@ -108,9 +110,8 @@ int db_select_sms_send(db_type type, db_pending pending, SMS *sms){
 	}
 	
 	result = dbi_conn_queryf(conn, query_select_sms_send, type, pending);
-		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...%s",query_select_sms_send, type, pending);
 	if(!result){
-		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...%s",query_select_sms_send, type, pending);
+		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...%s %s %s",query_select_sms_send, type, pending);
 		return -1;
 	}
 	

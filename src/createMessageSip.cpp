@@ -78,6 +78,35 @@ string createTrameSipSMS(Sip_msg &sip_msg){
 }
 */
 
+string createSip200(string ip_dst, string port_dst, string ip_src, string port_src, string userFrom, string userTo, string callID){
+        string newMessage = "SIP/2.0 200 OK\r\n";
+        newMessage += "From: <sip:" +userFrom+ "@"+ip_src+ ":" +port_src+">\r\n";
+        newMessage += "To: <sip:" +userTo+ "@" +ip_dst+ ":" +port_dst+ ">\r\n";
+	newMessage += callID+"\r\n";
+        newMessage += "CSeq: 1 MESSAGE\r\n";
+//        newMessage += "Via: SIP/2.0/UDP "+ip_src+":"+port_src+";alias;received="+ip_dst+":"+port_dst+"\r\n";
+        newMessage += "Via: SIP/2.0/UDP "+ip_dst+":"+port_dst+";alias;received="+ip_src+":"+port_src+"\r\n";
+        //newMessage += "Content-Length: 0\r\n";
+        //newMessage += "\r\n";
+        return newMessage;
+}
+
+static char* _getSipField(char* sip_msg, char* field){
+	char* callID = NULL;
+	char* str1 = strstr(sip_msg,field);
+	if(str1){
+		char* str2 = strstr(str1,"\r\n");
+		callID = (char*)malloc(sizeof(char)*(str2-str1+1));
+		memset(callID,0,sizeof(char)*(str2-str1+1));
+		strncpy(callID,str1,str2-str1);
+	}
+	return callID;
+}
+
+char* getCallID(char* sip_msg){
+	return _getSipField(sip_msg,"Call-ID:");
+}
+
 
 /*
 //example using

@@ -254,7 +254,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
     
     if((ret = select(sock_tcp + 1,&input_set,NULL,NULL,&timeout)) < 0){
 	printf("Error in select socket\n");
-	free(sms);
+	free_sms(&sms);
 	return (SMS*)NULL;
     }
     
@@ -263,7 +263,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
     	ret = recv(sock_tcp, local_buffer, sizeof(local_buffer),MSG_PEEK);
     	if( ret <= 4 ){
         	printf("Error in recv(PEEK)\n");
-		free(sms);
+		free_sms(&sms);
     		return (SMS*)NULL;
     	}
     
@@ -272,7 +272,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
     	ret = recv(sock_tcp, local_buffer, local_buffer_len, 0);
     	if( ret != local_buffer_len ){
         	printf("Error in recv(%d bytes)\n", local_buffer_len);
-		free(sms);
+		free_sms(&sms);
         	return (SMS*)NULL;
     	}
 
@@ -284,7 +284,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
         	if( ret != 0 ){ 
 			printf("Error in smpp34_dumpBuf():%d:\n%s\n",
         	                       smpp34_errno, smpp34_strerror );
-			free(sms);
+			free_sms(&sms);
 	    		return (SMS*) NULL;
 		}
         	printf("-------------------------- RECEIVE --------------------------\n");
@@ -296,7 +296,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
 	if( ret != 0){
 		printf( "Error in smpp34_unpack():%d:%s\n",
         	                    smpp34_errno, smpp34_strerror);
-		free(sms);
+		free_sms(&sms);
 		return (SMS*)NULL;
     	}
 
@@ -307,7 +307,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
        		if( ret != 0){
 		    printf("Error in smpp34_dumpPdu():%d:\n%s\n",
        		                               smpp34_errno, smpp34_strerror);
-		    free(sms);
+		    free_sms(&sms);
 		    return (SMS*) NULL;
        		}
         	printf("--- PDU \n%s\n", print_buffer);
@@ -317,7 +317,7 @@ SMS* listend_smpp(int sock_tcp, int verbose){
     	if( deliv_sm.command_id != DELIVER_SM || deliv_sm.command_status != ESME_ROK ){
         	printf("Error in DELIVER_SM[%d:%d]\n", 
                 	                       deliv_sm.command_id, deliv_sm.command_status);
-		free(sms);
+		free_sms(&sms);
         	return (SMS*)NULL;
     	}
 
@@ -339,12 +339,12 @@ SMS* listend_smpp(int sock_tcp, int verbose){
 	}
 	if(!sms->src || !sms->dst || !sms->msg){
 		printf("Error SMS no valid");
-		free(sms);
+		free_sms(&sms);
 		return (SMS*)NULL;
 	}
 	return (SMS*)sms;
     }
-    free(sms);
+    free_sms(&sms);
     return (SMS*)NULL;
 }
 
@@ -377,11 +377,13 @@ int do_smpp_close(int sock_tcp){
 }
 
 void free_sms(SMS **sms){
-        if((*sms)->msg) free((*sms)->msg);
-        if((*sms)->src) free((*sms)->src);
-        if((*sms)->dst) free((*sms)->dst);
-        if(*sms) free(*sms);
-        *sms = NULL;
+   if(*sms){
+      if((*sms)->msg) free((*sms)->msg);
+      if((*sms)->src) free((*sms)->src);
+      if((*sms)->dst) free((*sms)->dst);
+      free(*sms);
+      *sms = NULL;
+   }
 }
 
 

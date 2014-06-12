@@ -16,6 +16,9 @@
 #include "net/tcp/tcp.h"
 #include "net/smpp/smpp.h"
 #include "net/smpp/struct_smpp.h"
+//#include "net/smpp/lib_smpp34/smpp34.h"
+//#include "net/smpp/lib_smpp34/smpp34_structs.h"
+//#include "net/smpp/lib_smpp34/smpp34_params.h"
 #include <smpp34.h>
 #include <smpp34_structs.h>
 #include <smpp34_params.h>

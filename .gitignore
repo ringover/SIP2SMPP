@@ -1,6 +1,7 @@
 *~
 *.o
 *.bak
+*.swp
 connectionSIP
 connectionSMPP
 sip2smpp

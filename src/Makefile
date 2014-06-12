@@ -6,33 +6,44 @@ subdirs = daemonize ini log net
 
 SRC = $(wildcard *.c*)
 OBJ += $(SRC:.c=.o) $(SRC:.cpp=.o)
+ARG+=
 
-make: $(OBJ)
-#	$(LD) $(CXXFLASG) $(NAME).cpp $(OBJ) -o $(NAME) $(ARFLAGS)
+.PHONY: all
+all: CFLAGS+= 2> /dev/null
+all: CXXFLAGS+= 2> /dev/null
+all: ERG+=all
+all: build
 
+.PHONY: debug
+debug: CFLAGS+=
+debug: CXXFLAGS+=
+debug: ARG+= debug
+debug: build
+
+.PHONY: build
+build: $(OBJ)
+	-@for r in $(subdirs) "" ; do \
+                if [ -n "$$r" ]; then \
+			echo "Making $(ARG) $$r" ; \
+                        $(MAKE) $(ARG) -C $$r ; \
+                fi ; \
+        done
 %o: %c
 	$(CC) -c $^ -o $(CONFIG_OBJ)/$@ $(CFLAGS)
 %o: %cpp
 	$(CXX) -c $^ -o $(CONFIG_OBJ)/$@ $(CXXFLAGS)
-
-%.o:
+ 
+.PHONY: clean
+clean:
 	-@for r in $(subdirs) "" ; do \
                 if [ -n "$$r" ]; then \
-			echo "Making $$r" ; \
-                        $(MAKE) -C $$r ; \
+			echo "Making clean $$r" ; \
+                        $(MAKE) clean -C $$r ; \
                 fi ; \
         done
-
-
-install:
-	
-clean:
-	-@rm -f *.o
-	-@for r in $(subdirs) "" ; do \
-		if [ -n "$$r" ]; then \
-			echo "" ; \
-			echo "making $$r" ; \
-			$(MAKE) -C $$r clean ; \
-		fi ; \
-	done
-
+	-@for r in $(OBJ) "" ; do \
+                if [ -f "$(CONFIG_OBJ)/$$r" ]; then \
+			echo "rm $(CONFIG_OBJ)/$$r" ; \
+			rm -f $(CONFIG_OBJ)/$$r ; \
+                fi ; \
+        done

@@ -14,6 +14,7 @@ typedef enum _SectionFlags{
     SECTION_MAIN         = 0x01,
     SECTION_SIP_DEST     = 0x02,
     SECTION_SIP_LOCAL    = 0x04,
+    SECTION_SIP          = 0x06,
     SECTION_SMPP         = 0x08,
     SECTION_DBMS         = 0x10,
     SECTION_ALL          = 0xFF

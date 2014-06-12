@@ -34,29 +34,32 @@ Connection_SMPP::Connection_SMPP(char *server_ip, char *server_port, string user
 	sprintf(conn_smpp.systemId,"%s",user_smpp.c_str());
 	sprintf(conn_smpp.password,"%s",pass_smpp.c_str());
 	sprintf(conn_smpp.systemType,"%s","WWW");
+	this->connect = true;
 	switch(bind){
 	   case BIND_RECEIVER    :
 		if(do_smpp_connectReceiver(&conn_smpp, sock_tcp)){
                 	cerr << "\033[0;31;40mError in smpp receiver connect.\033[0m" << endl;
-                	exit(-1);
+			this->connect = false;
+                //	exit(-1);
         	}
 		break;
 	   case BIND_TRANSMITTER :
 		if(do_smpp_connectTransmitter(&conn_smpp, sock_tcp)){
                 	cerr << "\033[0;31;40mError in smpp transmitter connect.\033[0m" << endl;
-                	exit(-1);
+			this->connect = false;
+                //	exit(-1);
         	}
 		break;
 	   case BIND_TRANSCEIVER :
 		if(do_smpp_connect(&conn_smpp, sock_tcp)){
                 	cerr << "\033[0;31;40mError in smpp transceiver connect.\033[0m" << endl;
-                	exit(-1);
+			this->connect = false;
+                //	exit(-1);
        		}
 
 		break;
 	}
 	cout << "\033[0;33;40m...\033[0m";
-	this->connect = true;
 	cout << "\033[0;32;40m ok\033[0m" << endl;
 	return;
 }

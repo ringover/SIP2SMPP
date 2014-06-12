@@ -21,6 +21,9 @@ extern "C"{
 #include <smpp34.h>
 #include <smpp34_structs.h>
 #include <smpp34_params.h>
+//#include "smpp34.h"
+//#include "smpp34_structs.h"
+//#include "smpp34_params.h"
 
 #include "struct_smpp.h"
 /*

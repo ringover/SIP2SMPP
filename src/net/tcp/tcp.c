@@ -9,7 +9,7 @@
  */
 int do_tcp_connect(int *s, char *host, int port){
     int n = 1;
-    struct hostent *hostInfo;
+    struct hostent *hostInfo = NULL;
     struct in_addr addr;
     struct sockaddr_in name;
 
@@ -31,7 +31,7 @@ int do_tcp_connect(int *s, char *host, int port){
 
     memcpy(&addr.s_addr, hostInfo->h_addr_list[0], sizeof(struct in_addr));
     if(hostInfo){
-       free(hostInfo);
+//       free(hostInfo);
     }
     name.sin_family = AF_INET;
     name.sin_port   = htons(port);

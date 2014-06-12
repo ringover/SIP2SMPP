@@ -40,7 +40,7 @@
 
 using namespace std;
 
-int running = 0;
+int running = 1;
 char* pid_file = (char*)DEFAULT_PIDFILE;
 
 /**
@@ -113,9 +113,12 @@ SMS* sip2sms(string str){
         sms->src = (char*)malloc(sizeof(char)*21);
         sms->dst = (char*)malloc(sizeof(char)*21);
         sms->msg = (char*)malloc(sizeof(char)*256);
-        sms->src = (char*)from.get_user_name().c_str();
-        sms->dst = (char*)to.get_user_name().c_str();
-        sms->msg = (char*)explode[explode.size()-1].c_str();
+	memset(sms->src, 0, sizeof(char)*21);
+	memset(sms->dst, 0, sizeof(char)*21);
+	memset(sms->msg, 0, sizeof(char)*256);
+	strcpy(sms->src,(char*)from.get_user_name().c_str());
+	strcpy(sms->dst,(char*)to.get_user_name().c_str());
+	strcpy(sms->msg,(char*)explode[explode.size()-1].c_str());
 
         return sms;
 }
@@ -184,12 +187,15 @@ static void* gestionSMPP_listend(void *data){
 /**
 *  \brief This function is used for managed all input and output SMPP trafic
 */
+int temp_smpp = 0;
 static void* gestionSMPP(void *data){
+    while(running){
 	smpp = new Connection_SMPP(smppConnectIni.smpp_server_ip,smppConnectIni.smpp_server_port,
 			smppConnectIni.user_smpp,smppConnectIni.pass_smpp,BIND_TRANSCEIVER,true);
  	sem_init(&mutex_smpp, 0, 1);
 	
 	while(smpp && smpp->connect && running){
+		temp_smpp = 0;
 		pthread_t thread_listend;
 		pthread_t thread_send;
 
@@ -204,9 +210,10 @@ static void* gestionSMPP(void *data){
 		delete smpp;
 		smpp = NULL;
 	}
-	
 	sem_destroy(&mutex_smpp);
-	return 0;
+	sleep(2*temp_smpp++);
+    }
+    return 0;
 }
 
 /**
@@ -227,6 +234,12 @@ static void* gestionSIP_listend(void *data){
 			sms_set(DB_TYPE_SMPP,sms->src,sms->dst,sms->msg);
 			size_smpp++;
 		}
+
+		string sipOk = createSip200(sipDestIni.sip_dest_ip, sipDestIni.sip_dest_port,
+					    sipLocalIni.sip_local_ip, sipLocalIni.sip_local_port,
+					    sms->dst, sms->src, getCallID(str));
+		sip->sendSIP(sipOk, sipDestIni.sip_dest_ip, sipDestIni.sip_dest_port);
+
 		free_sms(&sms);
 		free(str);        
 	}
@@ -276,13 +289,16 @@ static void* gestionSIP_send(void *data){
 /**
 *  \brief This function is used for managed all input and output SIP trafic
 */
+int temp_sip = 0;
 static void* gestionSIP(void *data){
+    while(running){
 	sip = new Connection_SIP(sipLocalIni.sip_local_ip,sipLocalIni.sip_local_port,SIP_TRANSCEIVER,true);
  	sem_init(&mutex_sip, 0, 1);
 	/* initialize mutex to 1 - binary semaphore   */
 	/* second param = 0      - semaphore is local */
 
 	while( sip && sip->connect && running ){
+		temp_sip = 0;
 		pthread_t thread_listend;
                 pthread_t thread_send;
 
@@ -299,17 +315,22 @@ static void* gestionSIP(void *data){
 	}
 
 	sem_destroy(&mutex_sip);
-	return 0;
+	sleep(2*temp_sip++);
+    }
+    return 0;
 }
 
 static void* checkDB(void *data){
-	while(running){
-		if(dbi_conn_ping(conn)==0){
-			ERROR(LOG_FILE | LOG_SCREEN, "Reconnect to the DB...");
-		}
-		sleep(2);
-	}
-	return 0;
+/*    while(running){
+        if(dbi_conn_ping(conn)==0){
+            ERROR(LOG_FILE | LOG_SCREEN, "Reconnect to the DB...");
+            printf("%sDBMS             %s: [%s]\n", GREEN, END_COLOR, dbmsIni.dbms_name);
+            printf("%sDB dir name      %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_dirname);
+            printf("%sDB base name     %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_basename);
+        }
+        sleep(2);
+    }*/
+    return 0;
 }
 
 /**
@@ -323,7 +344,7 @@ int main(int argc,char **argv){
     int c, nofork=1;
     char *conffile = NULL;
     log_init("logFile",NULL);
-    log2display(LOG_NONE);
+    log2display(LOG_ALERT);
 
     while((c=getopt(argc, argv, "c:vp:fhD:"))!=-1) {
         switch(c) {
@@ -375,6 +396,12 @@ int main(int argc,char **argv){
         handler(-1);
     }
 
+    if(daemonize(nofork) != 0){
+        ERROR(LOG_FILE | LOG_SCREEN,"Daemoniize failed");
+        exit(-1);
+    }
+
+    printf("%sDB dir name      %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_dirname);
     if(db_init() == -1){
 	ERROR(LOG_FILE | LOG_SCREEN,"There are errors when the DB connection!");
 	handler(-1);
@@ -398,16 +425,11 @@ int main(int argc,char **argv){
     printf("%sDB dir name      %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_dirname);
     printf("%sDB base name     %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_basename);
 
-    if(daemonize(nofork) != 0){
-        ERROR(LOG_FILE | LOG_SCREEN,"Daemoniize failed");
-        exit(-1);
-    }
-
-//  pthread_t transceiverSMPP;
+    pthread_t transceiverSMPP;
     pthread_t transceiverSIP;
     pthread_t checkDBconnection;
 
-//  pthread_create(&transceiverSMPP,NULL,gestionSMPP,NULL);
+    pthread_create(&transceiverSMPP,NULL,gestionSMPP,NULL);
     pthread_create(&transceiverSIP,NULL,gestionSIP,NULL);
     pthread_create(&checkDBconnection,NULL,checkDB,NULL);
 
@@ -420,7 +442,8 @@ int main(int argc,char **argv){
 		cout << "  help        : display the commands"          << endl;
 		cout << "  sms         : create a SMS to send"          << endl;
 		cout << "  size_list   : display the sizes of list SMS" << endl;
-		cout << "  reload_conf : configuration file"            << endl;
+		cout << "  reload_sip  : reload SIP"                    << endl;
+		cout << "  reload_smpp : reload SMPP"                   << endl;
 		cout << "  log         : choice the log level"          << endl;
 		cout << "  shutdown    : exit the program"              << endl;
 	}
@@ -450,23 +473,31 @@ int main(int argc,char **argv){
 		cout << "size_smpp    : " << size_smpp    << endl;
 		cout << "size_sip     : " << size_sip     << endl;
 	}
-	if(str == "reload_conf"){
-	   if(!loadFileIni(conffile,SECTION_ALL)){
+	if(str == "reload_sip"){
+	   if(!loadFileIni(conffile,SECTION_SIP)){
 	        ERROR(LOG_FILE | LOG_SCREEN,"There are errors in the INI file!\n");
 	   }else{
 		if(sip){
 			delete sip;
 			sip = NULL;
 		}
+		temp_sip = 0;
 	   	sleep(1);
            	pthread_create(&transceiverSIP,NULL,gestionSIP,NULL);
-/*		if(smpp){
-			delete smpp;
-			smpp = NULL;
+           }
+	}
+	if(str == "reload_smpp"){
+	   if(!loadFileIni(conffile,SECTION_SMPP)){
+	        ERROR(LOG_FILE | LOG_SCREEN,"There are errors in the INI file!\n");
+	   }else{
+		if(sip){
+			delete sip;
+			sip = NULL;
 		}
-		sleep(1);
-        	pthread_create(&transceiverSMPP,NULL,gestionSMP,NULL);
-*/		}
+		temp_smpp = 0;
+	   	sleep(1);
+           	pthread_create(&transceiverSIP,NULL,gestionSIP,NULL);
+           }
 	}
 	if(str == "log"){
 		int lvl = 0;
@@ -478,6 +509,7 @@ int main(int argc,char **argv){
 	
     running = 0;
 
+/*
     if(smpp) {
        delete smpp;
        smpp = NULL;
@@ -486,8 +518,9 @@ int main(int argc,char **argv){
        delete sip;
        sip = NULL;
     }
+*/
 
-//  pthread_join(transceiverSMPP,NULL);
+    pthread_join(transceiverSMPP,NULL);
     pthread_join(transceiverSIP,NULL);
     pthread_join(checkDBconnection,NULL);
 
