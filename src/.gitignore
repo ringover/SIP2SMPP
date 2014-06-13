@@ -1,7 +1,6 @@
 *~
 *.o
 *.bak
-*.swp
 connectionSIP
 connectionSMPP
 sip2smpp
@@ -9,4 +8,4 @@ main
 Makefile.scan
 logFile
 core
-y.tab.c
+

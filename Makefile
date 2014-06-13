@@ -1,24 +1,100 @@
-CC  = clang
-CXX = clang++
+NAME = sip2smpp
 
-make:
-	${CC} -Wall -pedantic -g -c lib/daemonize/daemonize.c -o lib/daemonize/daemonize.o
-	${CC} -Wall -pedantic -g -c lib/minIni/minIni.c -o lib/minIni/minIni.o
-	${CC} -Wall -pedantic -g -c sip/udp_methode.c -o sip/udp_methode.o
-	${CC} -Wall -pedantic -g -c smpp/smpp.c -o smpp/smpp.o
-	${CC} -Wall -pedantic -g -c smpp/tcp.c -o smpp/tcp.o
-	${CXX} -Wall -pedantic -g -c createMessageSip.cpp -o createMessageSip.o
-	${CXX} -Wall -pedantic -g -c parseSip.cpp -o parseSip.o
-	${CXX} -Wall -pedantic -g -c connectionSIP.cpp -o connectionSIP.o
-	${CXX} -Wall -pedantic -g -std=c++11 -c connectionSMPP.cpp -o connectionSMPP.o
-	${CXX} -pedantic -std=c++11 -Wall -g main.cpp -o sip2smpp smpp/tcp.o smpp/smpp.o sip/udp_methode.o connectionSIP.o connectionSMPP.o createMessageSip.o parseSip.o -lsmpp34 -pthread
+include Makefile.defs
 
+CONFIG_OBJ = OBJ
+ARG+=
+
+subdirs= src
+cleandirs = src OBJ
+
+program_name = sip2smpp
+bin_target = /usr/bin
+cfg_target = /etc/sip2smpp
+
+.DEFAULT_GOAL:=all
+
+.PHONY: install
+install: all
 install:
-	cp smsc /usr/bin/
-	mkdir /etc/sip2smpp && cp config.ini /etc/sip2smpp/
-	
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "" ;
+	@ echo "#############################################################" ;
+	@ echo "################           SIP2SMPP            ##############" ;
+	@ echo "#############################################################" ;
+	@ echo "#### INSTALL OK !" ;
+	@ echo "#### " ;
+	-@if [ -f "$(program_name)" ]; then \
+		cp sip2smpp $(bin_target)/sip2smpp ; \
+	fi ;
+	-@if [ ! -d "$(cfg_target)" ]; then \
+		echo "#### A INI File sample is created to $(cfg_target)/config.ini" ; \
+		mkdir $(cfg_target) ; \
+		cp `pwd`/config.ini $(cfg_target)/config.ini ; \
+	fi ;
+	@ echo "#### " ;
+	@ echo "#### " ;
+	@ echo "#### Run sip2smpp with :" ;
+	@ echo "#### $(bin_target)/sip2smpp -c $(cfg_target)/config.ini" ;
+	@ echo "#### " ;
+	@ echo "#### Debug :" ;
+	@ echo "#### $(bin_target)/sip2smpp -c $(cfg_target)/config.ini -D 8" ;
+	@ echo "#### " ;
+	@ echo "#############################################################" ;
+	@ echo "#### " ;
+
+.PHONY: all
+all: CFLAGS+= 2> /dev/null
+all: CXXFLAGS+= 2> /dev/null
+all: ERG+=all
+all: build
+
+.PHONY: debug
+debug: CFLAGS+=
+debug: CXXFLAGS+=
+debug: ARG+= debug
+debug: build
+
+.PHONY: build
+build: $(OBJ)
+	-@if [ ! -d "$(CONFIG_OBJ)" ]; then \
+		mkdir $(CONFIG_OBJ) ; \
+	fi ;
+	-@for r in $(subdirs) "" ; do \
+                if [ -n "$$r" ]; then \
+			echo "Making $(ARG) $$r" ; \
+                        $(MAKE) $(ARG) -C $$r ; \
+                fi ; \
+        done
+	$(LD) $(CXXFLASG) $(CONFIG_OBJ)/*.o -o $(program_name) $(ARFLAGS) 2> /dev/null
+
+.PHONY: clean
 clean:
-	rm -f *.o
-	rm -f sip/*.o
-	rm -f smpp/*.o
-	rm sip2smpp
+	-@for r in $(subdirs) "" ; do \
+                if [ -n "$$r" ]; then \
+			echo "Making clean $$r" ; \
+                        $(MAKE) clean -C $$r ; \
+                fi ; \
+        done
+	-@for r in $(OBJ) "" ; do \
+                if [ -f "$(CONFIG_OBJ)/$$r" ]; then \
+			echo "rm $(CONFIG_OBJ)/$$r" ; \
+			rm -f $(CONFIG_OBJ)/$$r ; \
+                fi ; \
+        done
+	-@if [ -f "$(program_name)" ]; then \
+		echo "rm $(program_name)" ; \
+		rm -f $(program_name) ; \
+	fi ;
+
+

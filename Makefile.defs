@@ -1,0 +1,14 @@
+NAME = sip2smpp
+
+CC  = clang
+CXX = clang++
+
+#Link eDitor
+LD = $(CXX)
+
+LDFLAGS = -Wall -pedantic -g
+ARFLAGS = -lsmpp34 -pthread -ldbi  -lrt 
+#ARFLAGS =  -pthread -ldbi  -lrt 
+CFLAGS = $(LDFLAGS)
+#CXXFLASG = $(LDFLAGS) -std=c++11
+CXXFLASG = $(LDFLAGS)
