@@ -25,7 +25,7 @@ Connection_SMPP::Connection_SMPP(char *server_ip, char *server_port, string user
 	cout << "\033[0;33;40m..\033[0m";
 	
 	if(do_tcp_connect(&sock_tcp, (char*)server_ip, atoi(server_port)) != 0){
-        	cerr << "\033[0;31;40mError in tcp connect.\033[0m" << endl;
+        	cerr << "\033[0;31;40mError : tcp connect.\033[0m" << endl;
 		exit(-1);
 	}
 	cout << "\033[0;33;40m.\n\033[0m";
@@ -38,21 +38,21 @@ Connection_SMPP::Connection_SMPP(char *server_ip, char *server_port, string user
 	switch(bind){
 	   case BIND_RECEIVER    :
 		if(do_smpp_connectReceiver(&conn_smpp, sock_tcp)){
-                	cerr << "\033[0;31;40mError in smpp receiver connect.\033[0m" << endl;
+                	cerr << "\033[0;31;40mError : smpp receiver connect.\033[0m" << endl;
 			this->connect = false;
                 //	exit(-1);
         	}
 		break;
 	   case BIND_TRANSMITTER :
 		if(do_smpp_connectTransmitter(&conn_smpp, sock_tcp)){
-                	cerr << "\033[0;31;40mError in smpp transmitter connect.\033[0m" << endl;
+                	cerr << "\033[0;31;40mError : smpp transmitter connect.\033[0m" << endl;
 			this->connect = false;
                 //	exit(-1);
         	}
 		break;
 	   case BIND_TRANSCEIVER :
 		if(do_smpp_connect(&conn_smpp, sock_tcp)){
-                	cerr << "\033[0;31;40mError in smpp transceiver connect.\033[0m" << endl;
+                	cerr << "\033[0;31;40mError : smpp transceiver connect.\033[0m" << endl;
 			this->connect = false;
                 //	exit(-1);
        		}
@@ -71,7 +71,7 @@ Connection_SMPP::~Connection_SMPP(void){
         cout << "\033[0;31;40mtransceiver ..\033[0m" << sock_tcp << endl;
 	this->connect=false;
 	if(do_smpp_close(sock_tcp)){
-	 	cerr << "\033[0;31;40mError on the closing of the socket.\033[0m" << endl;
+	 	cerr << "\033[0;31;40mError : socket close.\033[0m" << endl;
 	}else{
                 cout << "\033[0;31;40m.. is closed\033[0m" << endl;
 	}
