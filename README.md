@@ -79,4 +79,5 @@ v2.0 :
 * X : thread pooling
 * V : change log level
 * - : add a daemon mode
+* X : add system_type (smpp)
  
