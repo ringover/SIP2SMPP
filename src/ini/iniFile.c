@@ -72,6 +72,10 @@ void freeFileIni(SectionFlags sections){
         free(dbmsIni.dbms_name);
     dbmsIni.dbms_name        = NULL;
 
+    if(dbmsIni.db_path)
+        free(dbmsIni.db_path);
+    dbmsIni.db_path      = NULL;
+
     if(dbmsIni.db_basename)
         free(dbmsIni.db_basename);
     dbmsIni.db_basename      = NULL;
@@ -152,6 +156,11 @@ static void _saveFileIni(SectionFlags sections){
         free(dbmsIni.dbms_name);
     dbmsIni.dbms_name         = _dbmsIni.dbms_name;
     _dbmsIni.dbms_name        = NULL;
+
+    if(dbmsIni.db_path)
+        free(dbmsIni.db_path);
+    dbmsIni.db_path       = _dbmsIni.db_path;
+    _dbmsIni.db_path      = NULL;
 
     if(dbmsIni.db_basename)
         free(dbmsIni.db_basename);
@@ -247,6 +256,11 @@ boolean checkFileIni(SectionFlags sections){
         ERROR(LOG_SCREEN,"\"dbms_name = [sqlite3]\" must be defined in the INI file!");
 	b = FALSE;
     }else if(strcmp(_dbmsIni.dbms_name,SQLITE) == 0){
+        if(_dbmsIni.db_path == NULL){
+            ERROR(LOG_SCREEN,"\"db_path = [path]\" must be defined in the INI file!");
+	    b = FALSE;
+        }
+/*
         if(_dbmsIni.db_basename == NULL){
             ERROR(LOG_SCREEN,"\"db_basename = [base_name]\" must be defined in the INI file!");
 	    b = FALSE;
@@ -256,6 +270,7 @@ boolean checkFileIni(SectionFlags sections){
             ERROR(LOG_SCREEN,"\"db_dirname = [path]\" must be defined in the INI file!");
             b = FALSE;
         }
+*/
     }else{ 
         ERROR(LOG_SCREEN,"%s is not supported!",_dbmsIni.dbms_name);
         b = FALSE;
@@ -420,6 +435,7 @@ boolean loadFileIni(char *conffile, SectionFlags sections){
 
     if((SECTION_DBMS & sections) != 0){
       char dbms_name_ini[20]        ="sqlite3";
+      char db_path_ini[200]         ="/etc/sip2smpp/sip2smpp.sqlite3";
       char db_basename_ini[50]      ="sip2smpp";
       char db_dirname_ini[200]      ="/var/sqlite3/sip2smpp";
       char db_encoding_ini[10]      ="UTF-8";
@@ -428,6 +444,10 @@ boolean loadFileIni(char *conffile, SectionFlags sections){
       if(_dbmsIni.dbms_name)
           free(_dbmsIni.dbms_name);
       _dbmsIni.dbms_name        = NULL;
+
+      if(_dbmsIni.db_path)
+          free(_dbmsIni.db_path);
+      _dbmsIni.db_path      = NULL;
 
       if(_dbmsIni.db_basename)
           free(_dbmsIni.db_basename);
@@ -450,6 +470,13 @@ boolean loadFileIni(char *conffile, SectionFlags sections){
 	  if(strcmp(dbms_name_ini, "none") != 0) {
               _strcpy(&(_dbmsIni.dbms_name),dbms_name_ini);
 	  }
+      }
+
+      if(_dbmsIni.db_path == NULL){
+          ini_gets("DBMS", "db_path", "none", db_path_ini, sizearray(db_path_ini), conffile);
+          if(strcmp(db_path_ini, "none") != 0) {
+              _strcpy(&(_dbmsIni.db_path),db_path_ini);
+          }
       }
 
       if(_dbmsIni.db_basename == NULL){

@@ -44,6 +44,7 @@ typedef struct _Ini_smpp{
 
 typedef struct _Ini_dbms{
     char *dbms_name;
+    char *db_path;	//SQLite3
     char *db_basename;	//SQLite3
     char *db_dirname;	//SQLite3
     char *db_encoding;	//default : UTF-8

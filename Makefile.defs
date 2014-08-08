@@ -1,7 +1,7 @@
 NAME = sip2smpp
 
-CC  = clang
-CXX = clang++
+CC  = gcc
+CXX = g++
 
 #Link eDitor
 LD = $(CXX)

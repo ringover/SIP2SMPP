@@ -8,13 +8,17 @@ Version 1.0
 
 ##INSTALL
 
-  First, you need to install the "libsmpp34" library :
+  First, you need to install all dependencies :
+
+  apt-get install libdbi1 libdbi-dev libxml2 libxml2-dev sqlite3 libsqlite3-dev libsqlite3-0 libdbd-sqlite3
+  
+  After you have to install "libsmpp34" library :
 
 > https://github.com/bjtpartners/libsmpp34 
 
     ./configure
     make && make install
-    
+
   Now, build the project :
       
     make
@@ -28,20 +32,33 @@ Version 1.0
 
   Edit the configuration file according to your settings, for example :
 
-    [main]
-    #BTS
-    smpp_server_ip = 192.168.10.1
-    smpp_server_port = 2775
-    
-    #Login/password
-    system_id_smpp = login
-    pass_smpp = password
-    
-    #SIP proxy
-    sip_dest_ip     = 127.0.0.1
-    sip_dest_port   = 5061
-    sip_local_ip    = 127.0.0.1
-    sip_local_port  = 5065
+	[MAIN]
+	#loglevel => [0-8]
+	loglevel = 8
+	#fork => 0/1
+	fork = 0
+
+	[SMPP_CONNECT]
+	#BTS
+	smpp_server_ip = 127.0.0.1
+	smpp_server_port = 1234
+	#Login/password BTS
+	system_id_smpp = test
+	pass_smpp = test
+	
+	[SIP_DEST]
+	sip_dest_ip     = 127.0.0.1
+	sip_dest_port   = 6000
+	
+	[SIP_LOCAL]
+	sip_local_ip    = 127.0.0.1
+	sip_local_port  = 5065
+	
+	[DBMS]
+	#SQLite 3 ONLY
+	dbms_name    = sqlite3
+	db_path      = /etc/sip2smpp.db
+	
 
 ##START
 
@@ -56,8 +73,9 @@ This program works well in screen.
 ##ROADMAP
 
 v2.0 :
-** database implementation replacing the fifo smpp et sip message
-* add a reload SIP, SMPP, CONF module
-** change log level
-** add a daemon mode
+* V : database implementation replacing the fifo smpp et sip message
+* - : add a reload SIP, SMPP, CONF module
+* X : thread pooling
+* V : change log level
+* - : add a daemon mode
  
