@@ -401,7 +401,6 @@ int main(int argc,char **argv){
         exit(-1);
     }
 
-    printf("%sDB dir name      %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_dirname);
     if(db_init() == -1){
 	ERROR(LOG_FILE | LOG_SCREEN,"There are errors when the DB connection!");
 	handler(-1);
@@ -422,8 +421,7 @@ int main(int argc,char **argv){
     printf("%sSMPP Server Port %s: [%s]\n", GREEN, END_COLOR, smppConnectIni.smpp_server_port);
     printf("\n");
     printf("%sDBMS             %s: [%s]\n", GREEN, END_COLOR, dbmsIni.dbms_name);
-    printf("%sDB dir name      %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_dirname);
-    printf("%sDB base name     %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_basename);
+    printf("%sDB path          %s: [%s]\n", GREEN, END_COLOR, dbmsIni.db_path);
 
     pthread_t transceiverSMPP;
     pthread_t transceiverSIP;
