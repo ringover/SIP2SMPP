@@ -20,14 +20,15 @@ extern "C" {
 
 void do_udp_close(int sock);
 
-int do_udp_connect(int *sock,char *addrIP, int port);
+int32_t do_udp_connect(int *sock, uint8_t *addrIP, uint16_t port);
 
-int udp_receive(int sock, char* buffer[], size_t buffer_len, int verbos);
+int32_t udp_receive(int sock, uint8_t** buffer, size_t buffer_len);
 
-int udp_send(int sock, char* buffer, size_t buffer_len, char* addrIP, int port, int verbos);
+int32_t udp_send(int sock, uint8_t* buffer, size_t buffer_len, uint8_t* addrIP, uint16_t port);
 
-#endif
+#endif /* UDP_METHODE_H */
 
 #ifdef __cplusplus
 }
 #endif
+

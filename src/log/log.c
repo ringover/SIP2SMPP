@@ -80,6 +80,16 @@ void log2display(Loglevel l){
 }
 
 /**
+ * \brief Get the log_choice variable. This variable is define by log2display function.
+ *
+ * \return Loglevel   the log_choice variable
+ *
+ */
+Loglevel log_get_display(void){
+  return log_choice;
+}
+
+/**
  * \brief	Reload the log file.
  *
  * \param	path : The parameter is the path of LOG file.
@@ -144,9 +154,10 @@ int log_destroy(void){
  */
 void log_hook(Loglevel lvl, unsigned int display, pthread_t tid, pid_t pid, const char* func, const char* file, unsigned int line, const char* buff){
 	if(P_MUTEX) pthread_mutex_lock(P_MUTEX);
-	if( (lvl >= LOG_CONSOLE || lvl <= LOG_ALERT) && buff){
+	//if( (lvl >= LOG_CONSOLE || lvl <= LOG_ALERT) && buff){
+	if(lvl >= LOG_CONSOLE && lvl <= LOG_ALERT && buff){
 		if(tid != 0){
-		   if( (display & LOG_SCREEN) != 0 && log_choice >= lvl ){
+		   if( (display & LOG_SCREEN) != 0 && log_choice >= lvl ){ 
 			printf_function("%s [%lx/%u] [%s,%s:%d] %s\n",str_loglevel[lvl],tid,pid,file,func,line,buff);
 		   }
 		   if( (display & LOG_FILE) != 0 && P_FILE ){

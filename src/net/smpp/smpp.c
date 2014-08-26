@@ -1,60 +1,107 @@
+
 #include "smpp.h"
 
 extern int  smpp34_errno;
 extern char smpp34_strerror[2048];
 
-uint8_t print_buffer[2048];
-uint8_t local_buffer[2048];
-int  local_buffer_len_smpp = 0;
-int  ret = 0;
-uint32_t tempo = 0;
-uint32_t cmd_id = 0;
+static uint8_t  print_buffer[2048];
+static uint8_t  local_buffer[2048];
+static int32_t  local_buffer_len_smpp = 0;
+static int32_t  ret = 0;
+static uint32_t tempo = 0;
 
-int unhex(char c) {
-  if (c >= '0' && c <= '9')
-    return (int)(c - '0');
-  if (c >= 'a' && c <= 'f')
-    return (int)(c - 'a' + 10);
-  if (c >= 'A' && c <= 'F')
-    return (int)(c - 'A' + 10);
-  return (-1);
+static int32_t pack_and_send(int sock_tcp, void *req);
+static int32_t recv_and_unpack(int sock_tcp, void *res);
+
+static int32_t pack_and_send(int sock_tcp, void *req){
+    /* Linealize PDU to buffer ********************************************/
+    memset(local_buffer, 0, sizeof(local_buffer));
+    ret = smpp34_pack2( local_buffer, sizeof(local_buffer),
+                                            &local_buffer_len_smpp, (void*)&req);
+    if(ret != 0){
+        ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_pack():%d:\n%s\n", smpp34_errno, smpp34_strerror)
+        return(int32_t) -1;
+    }
+    if(log_get_display() >= LOG_INFO){
+        /* Print PDU **********************************************************/
+        memset(print_buffer, 0, sizeof(print_buffer));
+        ret = smpp34_dumpPdu2( print_buffer, sizeof(print_buffer), (void*)&req);
+        if(ret != 0){
+            ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_dumpPdu():%d:\n%s\n", smpp34_errno, smpp34_strerror)
+            return(int32_t) -1;
+        }
+        INFO(LOG_SCREEN, "-----------------------------------------------------------\n"
+                         "SENDING PDU \n%s\n", print_buffer)
+        /* Print Buffer *******************************************************/
+        memset(print_buffer, 0, sizeof(print_buffer));
+        ret = smpp34_dumpBuf(print_buffer, sizeof(print_buffer),
+                                                local_buffer, local_buffer_len_smpp);
+        if(ret != 0){
+            ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_dumpBuf():%d:\n%s\n", smpp34_errno, smpp34_strerror )
+            return(int32_t) -1;
+        }
+        INFO(LOG_SCREEN, "SENDING BUFFER \n%s\n"
+                         "-----------------------------------------------------------\n",print_buffer);
+    }
+    /* Write to socket ****************************************************/
+    ret = send(sock_tcp, local_buffer, local_buffer_len_smpp, 0);
+    if(ret != local_buffer_len_smpp){
+        ERROR(LOG_FILE | LOG_SCREEN, "Error in send()\n")
+        return(int32_t) -1;
+    }
 }
 
-int hex2bin(char *hex, unsigned char *bin) {
-  unsigned int i = 0;
-  unsigned int j = 0;
-
-  // Trim string if comments present
-  if (strchr(hex, '#') != NULL)
-    *strchr(hex, '#') = 0;
-  if (strchr(hex, '*') != NULL)
-    *strchr(hex, '*') = 0;
-  if (strchr(hex, '\'') != NULL)
-    *strchr(hex, '\'') = 0;
-
-  for (i = 0; i < strlen(hex); i++) {
-    if (hex[i] >= '0' && unhex(hex[i]) < 0){
-      printf("Bad hex digit encountered.\n"); 
-      return( -1 );
+int32_t recv_and_unpack(int sock_tcp, void *res){
+    memset(local_buffer, 0, sizeof(local_buffer));
+    /* Read from socket ****************************************************/
+    ret = recv(sock_tcp, local_buffer, 1, MSG_PEEK);
+///////////////////////////////////////////////////
+//////////////        TODO      ///////////////////
+///////////////////////////////////////////////////
+ERROR(LOG_SCREEN, "ret peek %d[%s] ",ret,local_buffer);
+    if(ret != 1){
+        ERROR(LOG_FILE | LOG_SCREEN, "Error in recv(PEEK)\n")
+        return(int32_t) -1;
     }
-  }
-
-  for (i = 0; i < strlen(hex); i++) {
-    if (hex[i] < '0')
-      continue;
-    if (hex[i] >= '0' && hex[i+1] >= '0') {
-      bin[j++] = unhex(hex[i])*16+unhex(hex[i+1]);
-      i++;
-      continue;
+    memcpy(&tempo, local_buffer, sizeof(uint32_t)); /* get lenght PDU */
+    local_buffer_len_smpp = ntohl( tempo );
+    ret = recv(sock_tcp, local_buffer, local_buffer_len_smpp, 0);
+    if(ret != local_buffer_len_smpp){
+        ERROR(LOG_FILE | LOG_SCREEN, "Error in recv(%d bytes)\n", local_buffer_len_smpp)
+        return(int32_t) -1;
     }
-    if (hex[i] >= '0') {
-      bin[j++] = unhex(hex[i]);
+    if(log_get_display() >= LOG_INFO){
+        /* Print Buffer *******************************************************/
+        memset(print_buffer, 0, sizeof(print_buffer));
+        ret = smpp34_dumpBuf(print_buffer, sizeof(print_buffer),
+                                                local_buffer, local_buffer_len_smpp);
+        if(ret != 0){
+            ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_dumpBuf():%d:\n%s\n", smpp34_errno, smpp34_strerror )
+            return(int32_t) -1;
+        }
+        INFO(LOG_SCREEN, "-----------------------------------------------------------\n"
+                         "RECEIVE BUFFER \n%s\n", print_buffer);
     }
-  }
-  return (j);
+    /* unpack PDU *********************************************************/
+    ret = smpp34_unpack2((void*)&res, local_buffer, local_buffer_len_smpp);
+    if(ret != 0){
+        ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_unpack():%d:%s\n", smpp34_errno, smpp34_strerror)
+        return(int32_t) -1;
+    }
+    if(log_get_display() >= LOG_INFO){
+        /* Print PDU **********************************************************/
+        memset(print_buffer, 0, sizeof(print_buffer));
+        ret = smpp34_dumpPdu2(print_buffer, sizeof(print_buffer), (void*)&res);
+        if(ret != 0){
+            ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_dumpPdu():%d:\n%s\n", smpp34_errno, smpp34_strerror);
+            return(int32_t) -1;
+        }
+        INFO(LOG_SCREEN, "RECEIVE PDU \n%s\n"
+                         "-----------------------------------------------------------\n", print_buffer)
+    }
 }
 
-int do_smpp_connect(SmppConnect *p, int sock_tcp){
+int32_t do_smpp_connect_transceiver(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src){
     bind_transceiver_t      req;
     bind_transceiver_resp_t res;
     memset(&req, 0, sizeof(bind_transceiver_t));
@@ -62,37 +109,34 @@ int do_smpp_connect(SmppConnect *p, int sock_tcp){
 
     // Init PDU
     req.command_length   = 0;
-    req.command_id       = BIND_TRANSCEIVER;   
-    req.command_status   = ESME_ROK;           
+    req.command_id       = BIND_TRANSCEIVER;
+    req.command_status   = ESME_ROK;
     req.sequence_number  = 1;
-    sprintf((char*)req.system_id,"%s",(char*)p->systemId);
-    sprintf((char*)req.password,"%s",(char*)p->password);
-    sprintf((char*)req.system_type,"%s",(char*)p->systemType);
+    memcpy((void*)req.system_id,(void*)user,sizeof(req.system_id));
+    memcpy((void*)req.password,(void*)passwd,sizeof(req.password));
+    memcpy((void*)req.system_type,(void*)system_type,sizeof(req.system_type));
     req.interface_version = SMPP_VERSION;
-#if 0 // if you need add 
-    req.addr_ton          = 2;
-    req.addr_npi          = 1;
-    snprintf( b.address_range, sizeof(b.address_range), "%s", "");
-#endif
+    req.addr_ton          = ton_src;
+    req.addr_npi          = npi_src;
+    //memcpy((void*)req.address_range(void*)address_range,sizeof(req.address_range));
 
-    // FIRST STEP: PACK AND SEND
-#include "pack_and_send.inc"
-    // Set a timer (PENDIENTE)
-    // SECOND STEP: READ AND UNPACK Response 
-#include "recv_and_unpack.inc"
-    destroy_tlv( res.tlv );
+    if(pack_and_send(sock_tcp, (void*)&req) == -1){
+        return (int32_t) -1;
+    }
+    if(recv_and_unpack(sock_tcp, (void*)&res) == -1){
+        return (int32_t) -1;
+    }
+    destroy_tlv(res.tlv);
 
-    if( res.command_id != BIND_TRANSCEIVER_RESP ||
-        res.command_status != ESME_ROK ){
-        printf("Error in BIND(BIND_TRANSCEIVER)[%d:%d]\n", 
-                                       res.command_id, res.command_status);
-        return( -1 );
-    };
-    return( 0 );
+    if(res.command_id != BIND_TRANSCEIVER_RESP || res.command_status != ESME_ROK){
+        ERROR(LOG_SCREEN | LOG_FILE, "Error in BIND(BIND_TRANSCEIVER)[%d:%d]\n", res.command_id, res.command_status)
+        return(int32_t) -1;
+    }
+    return(int32_t) 0;
 }
 
 
-int do_smpp_connectReceiver(SmppConnect *p, int sock_tcp){
+int32_t do_smpp_connect_receiver(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src){
     bind_receiver_t      req;
     bind_receiver_resp_t res;
     memset(&req, 0, sizeof(bind_receiver_t));
@@ -103,34 +147,32 @@ int do_smpp_connectReceiver(SmppConnect *p, int sock_tcp){
     req.command_id       = BIND_RECEIVER;
     req.command_status   = ESME_ROK;
     req.sequence_number  = 1;
-    sprintf((char*)req.system_id,"%s",(char*)p->systemId);
-    sprintf((char*)req.password,"%s",(char*)p->password);
-    sprintf((char*)req.system_type,"%s",(char*)p->systemType);
+    memcpy((void*)req.system_id,(void*)user,sizeof(req.system_id));
+    memcpy((void*)req.password,(void*)passwd,sizeof(req.password));
+    memcpy((void*)req.system_type,(void*)system_type,sizeof(req.system_type));
     req.interface_version = SMPP_VERSION;
-#if 0 /* if you need add */
-    req.addr_ton          = 2;
-    req.addr_npi          = 1;
-    snprintf( b.address_range, sizeof(b.address_range), "%s", "");
-#endif
+    req.addr_ton          = ton_src;
+    req.addr_npi          = npi_src;
+    //memcpy((void*)req.address_range(void*)address_range,sizeof(req.address_range));
 
-    /* FIRST STEP: PACK AND SEND */
-#include "pack_and_send.inc"
-    // Set a timer (PENDIENTE)
-    // SECOND STEP: READ AND UNPACK Response
-#include "recv_and_unpack.inc"
-    destroy_tlv( res.tlv );
+    if(pack_and_send(sock_tcp, (void*)&req) == -1){
+        return (int32_t) -1;
+    }
 
-    if( res.command_id != BIND_RECEIVER_RESP ||
-        res.command_status != ESME_ROK ){
-        printf("Error in BIND(BIND_RECEIVER)[%d:%d]\n",
-                                       res.command_id, res.command_status);
-        //return( -1 );
-    };
-    return( 0 );
+    if(recv_and_unpack(sock_tcp, (void*)&res) == -1){
+        return (int32_t) -1;
+    }
+    destroy_tlv(res.tlv);
+
+    if(res.command_id != BIND_RECEIVER_RESP || res.command_status != ESME_ROK){
+        ERROR(LOG_SCREEN | LOG_FILE, "Error in BIND(BIND_RECEIVER)[%d:%d]\n", res.command_id, res.command_status)
+        return(int32_t) -1;
+    }
+    return(int32_t) 0;
 }
 
 
-int do_smpp_connectTransmitter(SmppConnect *p, int sock_tcp){
+int32_t do_smpp_connect_transmitter(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src){
     bind_transmitter_t      req;
     bind_transmitter_resp_t res;
     memset(&req, 0, sizeof(bind_transmitter_t));
@@ -141,38 +183,36 @@ int do_smpp_connectTransmitter(SmppConnect *p, int sock_tcp){
     req.command_id       = BIND_TRANSMITTER;
     req.command_status   = ESME_ROK;
     req.sequence_number  = 1;
-    sprintf((char*)req.system_id,"%s",(char*)p->systemId);
-    sprintf((char*)req.password,"%s",(char*)p->password);
-    sprintf((char*)req.system_type,"%s",(char*)p->systemType);
+
+    memcpy((void*)req.system_id,(void*)user,sizeof(req.system_id));
+    memcpy((void*)req.password,(void*)passwd,sizeof(req.password));
+    memcpy((void*)req.system_type,(void*)system_type,sizeof(req.system_type));
     req.interface_version = SMPP_VERSION;
-#if 0 /* if you need add */
-    req.addr_ton          = 2;
-    req.addr_npi          = 1;
-    snprintf( b.address_range, sizeof(b.address_range), "%s", "");
-#endif
+    req.addr_ton          = ton_src;
+    req.addr_npi          = npi_src;
+    //memcpy((void*)req.address_range(void*)address_range,sizeof(req.address_range));
 
-    /* FIRST STEP: PACK AND SEND */
-#include "pack_and_send.inc"
-    /* Set a timer (PENDIENTE) ********************************************/
-    /* SECOND STEP: READ AND UNPACK Response */
-#include "recv_and_unpack.inc"
-    destroy_tlv( res.tlv ); /* Por las dudas */
+    if(pack_and_send(sock_tcp, (void*)&req) == -1){
+        return (int32_t) -1;
+    }
+    if(recv_and_unpack(sock_tcp, (void*)&res) == -1){
+        return (int32_t) -1;
+    }
+    destroy_tlv(res.tlv);
 
-    if( res.command_id != BIND_TRANSMITTER_RESP ||
-        res.command_status != ESME_ROK ){
-        printf("Error in BIND(BIND_TRANSMITTER)[%d:%d]\n",
-                                       res.command_id, res.command_status);
-        return( -1 );
-    };
-    return( 0 );
+    if(res.command_id != BIND_TRANSMITTER_RESP || res.command_status != ESME_ROK){
+        ERROR(LOG_SCREEN | LOG_FILE, "Error in BIND(BIND_TRANSMITTER)[%d:%d]\n", res.command_id, res.command_status)
+        return (int32_t) -1;
+    }
+    return (int32_t) 0;
 }
 
 
-int do_smpp_send_message(SMS *p, int sock_tcp){
-    char message[256];
-    tlv_t tlv;
+int32_t do_smpp_send_message(int sock_tcp, uint8_t *src_addr, uint8_t *dst_addr, uint8_t *message, uint8_t ton_src, uint8_t npi_src, uint8_t ton_dst, uint8_t npi_dst){
     submit_sm_t      req;
     submit_sm_resp_t res;
+    tlv_t tlv;
+    memset(&tlv, 0, sizeof(tlv_t));
     memset(&req, 0, sizeof(submit_sm_t));
     memset(&res, 0, sizeof(submit_sm_resp_t));
 
@@ -182,70 +222,64 @@ int do_smpp_send_message(SMS *p, int sock_tcp){
     req.command_status   = ESME_ROK;
     req.sequence_number  = 2;
     
-    req.source_addr_ton  = TON_International;
-    req.source_addr_npi  = NPI_ISDN_E163_E164;
-    sprintf((char*)req.source_addr,"%s",(char*)p->src);
+    req.source_addr_ton  = ton_src;
+    req.source_addr_npi  = npi_src;
+    sprintf((char*)req.source_addr,"%s",(char*)src_addr);
 
-    req.dest_addr_ton    = TON_International;
-    req.dest_addr_npi    = NPI_ISDN_E163_E164;
-    sprintf((char*)req.destination_addr,"%s",(char*)p->dst);
-/*#if 0 // if you need this
-    b.esm_class        = 0;
-    b.protocol_id      = 0;
-    b.priority_flag    = 0;
-    snprintf( b.schedule_delivery_time, TIME_LENGTH, "%s", "");
-    snprintf( b.validity_period, TIME_LENGTH, "%s", "");
-    b.registered_delivery = 0;
-    b.replace_if_present_flag =0;
-    b.data_coding         = 0;
-    b.sm_default_msg_id   = 0;
-#endif*/
+    req.dest_addr_ton    = ton_dst;
+    req.dest_addr_npi    = npi_dst;
+    sprintf((char*)req.destination_addr,"%s",(char*)dst_addr);
+    //if you need this
+      //req.esm_class        = 0;
+      //req.protocol_id      = 0;
+      //req.priority_flag    = 0;
+      //snprintf( req.schedule_delivery_time, TIME_LENGTH, "%s", "");
+      //snprintf( req.validity_period, TIME_LENGTH, "%s", "");
+      //req.registered_delivery = 0;
+      //req.replace_if_present_flag =0;
+      //req.data_coding         = 0;
+      //req.sm_default_msg_id   = 0;
 
-    sprintf((char*)message,"%s",(char*)p->msg);
-/*#if 0 // Message in short_message scope
-    b.sm_length           = strlen(TEXTO);
-    memcpy(b.short_message, TEXTO, b.sm_length);
-//#else // Message in Payload*/
+    //if message is <255 octets
+      //req.sm_length = strlen((char*)message);
+      //memcpy(req.short_message, message, req.sm_length);
+    //if message is > 254 octets or > 0 octet
     tlv.tag = TLVID_message_payload;
-    tlv.length = strlen(message);
+    tlv.length = strlen((char*)message);
     memcpy(tlv.value.octet, message, tlv.length);
     build_tlv( &(req.tlv), &tlv );
-//#endif
 
-    // Add other optional param
-    tlv.tag = TLVID_user_message_reference;
-    tlv.length = sizeof(uint16_t);
-    tlv.value.val16 = 0x0024;
-    build_tlv( &(req.tlv), &tlv );
+    // Add other optional param - sample
+    //tlv.tag = TLVID_user_message_reference;
+    //tlv.length = sizeof(uint16_t);
+    //tlv.value.val16 = 0x0024;
+    //build_tlv( &(req.tlv), &tlv );
 
-    // FIRST STEP: PACK AND SEND
-#include "pack_and_send.inc"
-    destroy_tlv( req.tlv );
-    // Set a timer (PENDIENTE)
-    // SECOND STEP: READ AND UNPACK Response
-#include "recv_and_unpack.inc"
+    if(pack_and_send(sock_tcp, (void*)&req) == -1){
+        return (int32_t) -1;
+    }
+    destroy_tlv(req.tlv);
 
-    if( res.command_id != SUBMIT_SM_RESP ||
-        res.command_status != ESME_ROK ){
-        printf("Error in send(SUBMIT_SM)[%08X:%08X]\n", 
-                                       res.command_id, res.command_status);
-        return( -1 );
-    };
-    return( 0 );
+    if(recv_and_unpack(sock_tcp, (void*)&res) == -1){
+        return (int32_t) -1;
+    }
+
+    if(res.command_id != SUBMIT_SM_RESP || res.command_status != ESME_ROK){
+        ERROR(LOG_SCREEN | LOG_FILE ,"Error in send(SUBMIT_SM)[%08X:%08X]\n", res.command_id, res.command_status)
+        return(int32_t) -1;
+    }
+    return(int32_t) 0;
 }
 
-SMS* listend_smpp(int sock_tcp, int verbose){
-    SMS *sms = (SMS*)malloc(sizeof(SMS));
+int32_t do_smpp_receive_message(int sock_tcp, uint8_t **src_addr, uint8_t **dst_addr, uint8_t **message){
+    if(!(src_addr && *src_addr == NULL && dst_addr && *dst_addr == NULL && message && *message == NULL)){
+        return (int32_t) -1;
+    }
     int local_buffer_len = 0;
     fd_set input_set;
     struct timeval timeout;
     deliver_sm_t     deliv_sm;
-    submit_sm_t      req;
-    submit_sm_resp_t res;
-    memset(sms, 0, sizeof(SMS));
     memset(&deliv_sm, 0, sizeof(deliver_sm_t));
-    memset(&req, 0, sizeof(submit_sm_t));
-    memset(&res, 0, sizeof(submit_sm_resp_t));
     timeout.tv_sec  = 0;
     timeout.tv_usec = 250;
     
@@ -253,102 +287,39 @@ SMS* listend_smpp(int sock_tcp, int verbose){
     FD_SET(sock_tcp,&input_set);
     
     if((ret = select(sock_tcp + 1,&input_set,NULL,NULL,&timeout)) < 0){
-	printf("Error in select socket\n");
-	free_sms(&sms);
-	return (SMS*)NULL;
+        ERROR(LOG_SCREEN | LOG_FILE ,"Error in select socket")
+        return (int32_t) -1;
     }
     
     if(ret > 0){
-    	memset(local_buffer, 0, sizeof(local_buffer));
-    	ret = recv(sock_tcp, local_buffer, sizeof(local_buffer),MSG_PEEK);
-    	if( ret <= 4 ){
-        	printf("Error in recv(PEEK)\n");
-		free_sms(&sms);
-    		return (SMS*)NULL;
-    	}
-    
-    	memcpy(&tempo, local_buffer, sizeof(uint32_t));
-    	local_buffer_len = ntohl( tempo );
-    	ret = recv(sock_tcp, local_buffer, local_buffer_len, 0);
-    	if( ret != local_buffer_len ){
-        	printf("Error in recv(%d bytes)\n", local_buffer_len);
-		free_sms(&sms);
-        	return (SMS*)NULL;
-    	}
+        if(recv_and_unpack(sock_tcp, (void*)&deliv_sm) == -1){
+            return (int32_t) -1;
+        }
 
-    	// Print Buffer *******************************************************
-    	if(verbose){
-        	memset(print_buffer, 0, sizeof(print_buffer));
-        	ret = smpp34_dumpBuf(print_buffer, sizeof(print_buffer),
-        	                                        local_buffer, local_buffer_len);
-        	if( ret != 0 ){ 
-			printf("Error in smpp34_dumpBuf():%d:\n%s\n",
-        	                       smpp34_errno, smpp34_strerror );
-			free_sms(&sms);
-	    		return (SMS*) NULL;
-		}
-        	printf("-------------------------- RECEIVE --------------------------\n");
-        	printf("--- BUFFER \n%s\n", print_buffer);
-    	}
+        if(deliv_sm.command_id != DELIVER_SM || deliv_sm.command_status != ESME_ROK){
+            ERROR(LOG_SCREEN | LOG_FILE ,"Error in DELIVER_SM[%d:%d]", deliv_sm.command_id, deliv_sm.command_status)
+            return (int) -1;
+        }
 
-    	// unpack PDU *********************************************************
-    	ret = smpp34_unpack2((void*)&deliv_sm, local_buffer, local_buffer_len);
-	if( ret != 0){
-		printf( "Error in smpp34_unpack():%d:%s\n",
-        	                    smpp34_errno, smpp34_strerror);
-		free_sms(&sms);
-		return (SMS*)NULL;
-    	}
+        //copy SMS
+        if(strlen((char*)deliv_sm.source_addr)>0 && strlen((char*)deliv_sm.destination_addr)>0 && strlen((char*)deliv_sm.short_message)>0){
+            *src_addr = (char*)calloc(strlen((char*)deliv_sm.source_addr)+1,sizeof(char));
+            strcpy((char*)*src_addr,(char*)deliv_sm.source_addr);
 
-    	// Print PDU **********************************************************
-    	if(verbose){
-       		memset(print_buffer, 0, sizeof(print_buffer));
-       		ret = smpp34_dumpPdu2(print_buffer, sizeof(print_buffer), (void*)&deliv_sm);
-       		if( ret != 0){
-		    printf("Error in smpp34_dumpPdu():%d:\n%s\n",
-       		                               smpp34_errno, smpp34_strerror);
-		    free_sms(&sms);
-		    return (SMS*) NULL;
-       		}
-        	printf("--- PDU \n%s\n", print_buffer);
-        	printf("-----------------------------------------------------------\n\n");
-    	 }
+            *dst_addr = (char*)calloc(strlen((char*)deliv_sm.destination_addr)+1,sizeof(char));
+            strcpy((char*)*dst_addr,(char*)deliv_sm.destination_addr);
 
-    	if( deliv_sm.command_id != DELIVER_SM || deliv_sm.command_status != ESME_ROK ){
-        	printf("Error in DELIVER_SM[%d:%d]\n", 
-                	                       deliv_sm.command_id, deliv_sm.command_status);
-		free_sms(&sms);
-        	return (SMS*)NULL;
-    	}
-
-	//copy SMS
-	if(req.source_addr){
-		sms->src = (char*)malloc(sizeof(char)*(strlen((char*)deliv_sm.source_addr)+1));
-		memset(sms->src,0,(strlen((char*)deliv_sm.source_addr)+1));
-		strcpy((char*)sms->src,(char*)deliv_sm.source_addr);
-	}
-	if(req.destination_addr){
-		sms->dst = (char*)malloc(sizeof(char)*(strlen((char*)deliv_sm.destination_addr)+1));
-		memset(sms->dst,0,(strlen((char*)deliv_sm.destination_addr)+1));
-		strcpy((char*)sms->dst,(char*)deliv_sm.destination_addr);
-	}
-	if(req.short_message){
-		sms->msg = (char*)malloc(sizeof(char)*(strlen((char*)deliv_sm.short_message)+1));
-		memset(sms->msg,0,(strlen((char*)deliv_sm.short_message)+1));
-		strcpy((char*)sms->msg,(char*)deliv_sm.short_message);
-	}
-	if(!sms->src || !sms->dst || !sms->msg){
-		printf("Error SMS no valid");
-		free_sms(&sms);
-		return (SMS*)NULL;
-	}
-	return (SMS*)sms;
+            *message = (char*)calloc(strlen((char*)deliv_sm.short_message)+1,sizeof(char));
+            strcpy((char*)*message,(char*)deliv_sm.short_message);
+            return (int) 0;
+        }else{
+            ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid SMS")
+        }
     }
-    free_sms(&sms);
-    return (SMS*)NULL;
+    return (int) -1;
 }
 
-int do_smpp_close(int sock_tcp){
+int32_t do_smpp_close(int sock_tcp){
     unbind_t      req;
     unbind_resp_t res;
     memset(&req, 0, sizeof(unbind_t));
@@ -360,32 +331,20 @@ int do_smpp_close(int sock_tcp){
     req.command_status   = ESME_ROK;
     req.sequence_number  = 3;
 
-    // FIRST STEP: PACK AND SEND */
-#include "pack_and_send.inc"
-    // Set a timer (PENDIENTE)
-    // SECOND STEP: READ AND UNPACK Response 
-#include "recv_and_unpack.inc"
+    if(pack_and_send(sock_tcp, (void*)&req) == -1){
+        return (int32_t) -1;
+    }
 
-    if( res.command_id != UNBIND_RESP ||
-        res.command_status != ESME_ROK ){
-        printf("Error in send(UNBIND)[%d:%d]\n", 
-                                       res.command_id, res.command_status);
-        return( -1 );
-    };
+    if(recv_and_unpack(sock_tcp, (void*)&res) == -1){
+        return (int32_t) -1;
+    }
 
-    return( 0 );
+    if(res.command_id != UNBIND_RESP || res.command_status != ESME_ROK){
+        ERROR(LOG_SCREEN | LOG_FILE ,"Error in send(UNBIND)[%d:%d]\n", res.command_id, res.command_status)
+        return (int32_t) -1;
+    }
+
+    return (int32_t) 0;
 }
-
-void free_sms(SMS **sms){
-   if(*sms){
-      if((*sms)->msg) free((*sms)->msg);
-      if((*sms)->src) free((*sms)->src);
-      if((*sms)->dst) free((*sms)->dst);
-      free(*sms);
-      *sms = NULL;
-   }
-}
-
-
 
 

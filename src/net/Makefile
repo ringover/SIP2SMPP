@@ -33,7 +33,6 @@ build: $(OBJ)
 %o: %cpp
 	$(CXX) -c $^ -o $(CONFIG_OBJ)/$@ $(CXXFLAGS)
  
- 
 .PHONY: clean
 clean:
 	-@for r in $(subdirs) "" ; do \
@@ -47,4 +46,4 @@ clean:
 			echo "rm $(CONFIG_OBJ)/$$r" ; \
 			rm -f $(CONFIG_OBJ)/$$r ; \
                 fi ; \
-        done
+    done

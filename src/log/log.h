@@ -71,6 +71,7 @@ extern char* str_loglevel[];
 extern int (*printf_function)(const char *restrict, ...);
 
 void log2display(Loglevel l);
+Loglevel log_get_display(void);
 int  log_init(const char *path,const void *p_function);
 int  log_destroy(void);
 int  log_change_file(const char *path);

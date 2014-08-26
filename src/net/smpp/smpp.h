@@ -18,43 +18,26 @@ extern "C"{
 #include <stdint.h>
 #endif
 
-#include <smpp34.h>
-#include <smpp34_structs.h>
-#include <smpp34_params.h>
-//#include "smpp34.h"
-//#include "smpp34_structs.h"
-//#include "smpp34_params.h"
+#include "./libsmpp34/smpp34.h"
+#include "./libsmpp34/smpp34_structs.h"
+#include "./libsmpp34/smpp34_params.h"
 
-#include "struct_smpp.h"
-/*
-extern int  smpp34_errno;
-extern char smpp34_strerror[2048];
+#include "../../tools.h"
+#include "../../log/log.h"
 
-uint8_t print_buffer[2048];
-uint8_t local_buffer[1024];
-int  local_buffer_len_smpp = 0;
-int  ret = 0;
-uint32_t tempo = 0;
-uint32_t cmd_id = 0;
-*/
-int unhex(char c);
+int32_t do_smpp_connect_transceiver(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src);
+int32_t do_smpp_connect_receiver(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src);
+int32_t do_smpp_connect_transmitter(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src);
 
-int hex2bin(char *hex, unsigned char *bin);
+int32_t do_smpp_send_message(int sock_tcp, uint8_t *src_addr, uint8_t *dst_addr, uint8_t *message, uint8_t ton_src, uint8_t npi_src, uint8_t ton_dst, uint8_t npi_dst);
 
-int do_smpp_connect(SmppConnect *p, int sock_tcp);
-int do_smpp_connectTransmitter(SmppConnect *p, int sock_tcp);
-int do_smpp_connectReceiver(SmppConnect *p, int sock_tcp);
+int32_t do_smpp_receive_message(int sock_tcp, uint8_t **src_addr, uint8_t **dst_addr, uint8_t **message);
 
-int do_smpp_send_message(SMS *p, int sock_tcp);
-
-SMS* listend_smpp(int sock_tcp, int verbose);
-
-int do_smpp_close(int sock_tcp);
-
-void free_sms(SMS **sms);
+int32_t do_smpp_close(int sock_tcp);
 
 #endif
 
 #ifdef __cplusplus
 }
 #endif
+

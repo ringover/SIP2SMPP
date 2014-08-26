@@ -1,6 +1,6 @@
 /**
-*       DataBase
-*/
+ * 
+ */
 #ifdef __cplusplus
 extern "C"{
 #endif
@@ -12,11 +12,12 @@ extern "C"{
 #include <stdio.h>
 #include <libgen.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <sys/time.h>
 #include <math.h>
 #include <dbi/dbi.h>
 
-#include "net/smpp/struct_smpp.h"
+#include "sms_struct.h"
 #include "log/log.h"
 #include "type_projet.h"
 #include "ini/iniFile.h"
@@ -65,14 +66,14 @@ int db_prepare(void);
  */
 int db_select_sms_send(db_type type, db_pending pending,SMS *sms);
 SMS* db_select_sms_send_id(int id);
-int db_insert_sms_send(db_pending pending, db_type type, const char *src, const char* dst, const char *msg);
+int db_insert_sms_send(db_pending pending, db_type type, const uint8_t *src, const uint8_t *dst, const uint8_t *msg);
 int db_update_sms_send(db_pending pending, SMS *sms);
 int db_delete_sms_send(const SMS *sms);
 
 /**
  * Function used
  */
-int sms_set(db_type type, const char *src, const char* dst, const char *msg);
+int sms_set(db_type type, const uint8_t *src, const uint8_t *dst, const uint8_t *msg);
 int sms_get(db_type type, SMS *sms);
 int sms_count(db_type type);
 int sms_cls(SMS *sms);
@@ -83,3 +84,4 @@ int sms_rm(const SMS *sms);
 #ifdef __cplusplus
 }
 #endif
+

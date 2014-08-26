@@ -10,7 +10,7 @@ extern "C"{
 
 #define SQLITE "sqlite3"
 
-typedef enum _SectionFlags{
+typedef enum _section_flags{
     SECTION_MAIN         = 0x01,
     SECTION_SIP_DEST     = 0x02,
     SECTION_SIP_LOCAL    = 0x04,
@@ -18,50 +18,57 @@ typedef enum _SectionFlags{
     SECTION_SMPP         = 0x08,
     SECTION_DBMS         = 0x10,
     SECTION_ALL          = 0xFF
-}SectionFlags;
+}section_flags;
 
-typedef struct _Ini_main{
-    char *loglevel;
-    char *fork;
-}Ini_main;
+typedef struct _ini_main{
+    uint8_t *loglevel;
+    uint8_t *fork;
+} ini_main;
 
-typedef struct _Ini_sip_dest{
-    char *sip_dest_ip;
-    char *sip_dest_port;
-}Ini_sip_dest;
+typedef struct _ini_sip_dest{
+    uint8_t *sip_dest_ip;
+    uint8_t *sip_dest_port;
+} ini_sip_dest;
 
 typedef struct _Ini_sip_local{
-    char *sip_local_ip;
-    char *sip_local_port;
-}Ini_sip_local;
+    uint8_t *sip_local_ip;
+    uint8_t *sip_local_port;
+} ini_sip_local;
 
-typedef struct _Ini_smpp{
-    char *smpp_server_ip;
-    char *smpp_server_port;
-    char *pass_smpp;
-    char *user_smpp;
-}Ini_smpp;
+typedef struct _ini_smpp{
+    uint8_t *smpp_server_ip;
+    uint8_t *smpp_server_port;
+    uint8_t *pass_smpp;
+    uint8_t *user_smpp;
+    int8_t   npi_src; //numeric_plan_indicator
+    int8_t   ton_src; //type_of_number
+    int8_t   npi_dst; //numeric_plan_indicator
+    int8_t   ton_dst; //type_of_number
+    uint8_t *system_type;
+    uint8_t *service_type;
+    int8_t   command_id;
+} ini_smpp;
 
-typedef struct _Ini_dbms{
-    char *dbms_name;
-    char *db_path;	//SQLite3
-    char *db_basename;	//SQLite3
-    char *db_dirname;	//SQLite3
-    char *db_encoding;	//default : UTF-8
-    char *db_ttl_sms;	//default : 0 (unlimited)
-}Ini_dbms;
+typedef struct _ini_dbms{
+    uint8_t *dbms_name;
+    uint8_t *db_path;	//SQLite3
+    uint8_t *db_basename;	//SQLite3
+    uint8_t *db_dirname;	//SQLite3
+    uint8_t *db_encoding;	//default : UTF-8
+    uint8_t *db_ttl_sms;	//default : 0 (unlimited)
+} ini_dbms;
 
-Ini_main       mainIni;
-Ini_sip_dest   sipDestIni;
-Ini_sip_local  sipLocalIni;
-Ini_smpp       smppConnectIni;
-Ini_dbms       dbmsIni;
+ini_main       main_ini;
+ini_sip_dest   sip_dest_ini;
+ini_sip_local  sip_local_ini;
+ini_smpp       smpp_ini;
+ini_dbms       dbms_ini;
 
-boolean checkFileIni(SectionFlags sections);
+bool check_file_ini(section_flags sections);
 
-boolean loadFileIni(char *conffile, SectionFlags sections);
+bool load_file_ini(uint8_t *conffile, section_flags sections);
 
-void freeFileIni(SectionFlags sections);
+void free_file_ini(section_flags sections);
 
 #endif /*INI_FILE_H*/
 

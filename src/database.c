@@ -1,3 +1,4 @@
+
 #include "database.h"
 
 /**
@@ -48,24 +49,24 @@ void db_error_func(dbi_conn conn, void *data){
 int db_init(void){
 	uint8_t str_dir_name[200] = "";
 	uint8_t str_path_db[200] = "";
-	strcpy((char*)str_dir_name,(char*)dbmsIni.db_path);
-	strcpy((char*)str_path_db,(char*)dbmsIni.db_path);
+	strcpy((char*)str_dir_name,(char*)dbms_ini.db_path);
+	strcpy((char*)str_path_db,(char*)dbms_ini.db_path);
 	dbi_initialize(NULL);
 	
-	if(!dbmsIni.dbms_name){
+	if(!dbms_ini.dbms_name){
 		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection.");
                 return -1;	
 	}
-	if(strcmp(dbmsIni.dbms_name,"sqlite3")!=0){
+	if(strcmp(dbms_ini.dbms_name,"sqlite3")!=0){
 		ERROR(LOG_SCREEN | LOG_FILE,"Only SQLite3 is supported.");
 		return -1;
 	}
 
-	conn = dbi_conn_new(dbmsIni.dbms_name);
+	conn = dbi_conn_new(dbms_ini.dbms_name);
 	
 	if(conn == NULL) {
-		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection with %s.",dbmsIni.dbms_name);
-		INFO( LOG_SCREEN | LOG_FILE,"db_path = %s",dbmsIni.db_path);
+		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection with %s.",dbms_ini.dbms_name);
+		INFO( LOG_SCREEN | LOG_FILE,"db_path = %s",dbms_ini.db_path);
 		return -1;
 	}
 	
@@ -78,7 +79,7 @@ int db_init(void){
 		return -1;
 	}
 	
-	INFO(LOG_SCREEN,"Connection to %s server is established.",dbmsIni.dbms_name);
+	INFO(LOG_SCREEN,"Connection to %s server is established.",dbms_ini.dbms_name);
 	return db_prepare();
 }
 
@@ -187,7 +188,7 @@ int db_count_sms_send(db_type type){
 	return count;
 }
 
-int db_insert_sms_send(db_pending pending, db_type type, const char *src, const char* dst, const char *msg){
+int db_insert_sms_send(db_pending pending, db_type type, const uint8_t *src, const uint8_t *dst, const uint8_t *msg){
 	dbi_result result;
 
 	if(!src || !dst || !msg){
@@ -195,7 +196,7 @@ int db_insert_sms_send(db_pending pending, db_type type, const char *src, const 
 		return -1;
 	}
 	
-	result = dbi_conn_queryf(conn,query_insert_sms_send,type,dbmsIni.db_ttl_sms,pending,src,dst,msg);
+	result = dbi_conn_queryf(conn,query_insert_sms_send,type,dbms_ini.db_ttl_sms,pending,src,dst,msg);
 	
 	if(!result){
 		ERROR(LOG_SCREEN | LOG_FILE,"Query failed...");
@@ -208,9 +209,9 @@ int db_insert_sms_send(db_pending pending, db_type type, const char *src, const 
 int db_update_sms_send(db_pending pending, SMS *sms){
 	dbi_result result;
 	
-	DEBUG(LOG_SCREEN | LOG_FILE,"db_ttl_sms = %s",dbmsIni.db_ttl_sms);
+	DEBUG(LOG_SCREEN | LOG_FILE,"db_ttl_sms = %s",dbms_ini.db_ttl_sms);
 
-	if(strcmp(dbmsIni.db_ttl_sms,"0") != 0){
+	if(strcmp(dbms_ini.db_ttl_sms,"0") != 0){
 		if(--(sms->ttl) <= 0){
 			printf("SMS_TTL kill\n");
 			return db_delete_sms_send(sms);
@@ -265,7 +266,7 @@ int db_delete_sms_send(const SMS *sms){
  * \param src	This parameter is the MSISDN destination
  * \param src	This parameter is the SMS message
  */
-int sms_set(db_type type, const char *src, const char *dst, const char *msg){
+int sms_set(db_type type, const uint8_t *src, const uint8_t *dst, const uint8_t *msg){
 	if(db_insert_sms_send(DB_PENDING_FALSE, type, src, dst, msg)==0){
 		return 0;
 	}

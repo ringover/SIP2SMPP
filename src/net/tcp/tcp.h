@@ -12,7 +12,6 @@ extern "C"{
 #include <unistd.h>
 #include <string.h>
 #include <errno.h>
-#include "../smpp/struct_smpp.h"
 #include "../../log/log.h"
 #include "../../str.h"
 

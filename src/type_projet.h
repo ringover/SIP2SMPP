@@ -1,7 +1,12 @@
+#ifdef __cplusplus
+extern "C"{
+#endif
+
 #ifndef TYPE_PROJET_H
 #define TYPE_PROJET_H
 
 #include <stdint.h> 
+#include <stdbool.h> 
 
 #define sizearray(a) (sizeof(a) / sizeof((a)[0]))
 
@@ -23,10 +28,14 @@
 #define END_COLOR  "\033[0m"
 //End Color
 
-typedef enum{
-    FALSE=0,
-    TRUE=1
-}boolean;
+/*typedef enum _boolean{
+    FALSE = 0,
+    TRUE  = 1
+}boolean;*/
 
 #endif /*TYPE_PROJET_H*/
+
+#ifdef __cplusplus
+}
+#endif
 
