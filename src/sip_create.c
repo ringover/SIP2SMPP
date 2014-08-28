@@ -20,7 +20,7 @@ static uint8_t *str_trame_sip_202_accepted = {
           "SIP/2.0 202 Accepted\r\n"
           "Via: SIP/2.0/UDP %s\r\n" // ip_src
           "From: sip:%s@%s:%s\r\n"  // user_from - ip_src - port_src
-          "To: <sip:%s@%s:%s>;tag=1B0QUUmSDeB7B\r\n" // user_to - ip_dst - port_dst
+          "To: sip:%s@%s:%s;tag=1B0QUUmSDeB7B\r\n" // user_to - ip_dst - port_dst
           "Call-ID: toto-567854\r\n"
           "CSeq: 1 MESSAGE\r\n"
           "Contact: <sip:%s:%s>\r\n" // ip_src - port_src
@@ -49,22 +49,35 @@ uint8_t* create_trame_sip_202_accepted(uint8_t *ip_dst, uint8_t *port_dst, uint8
 *
 */
 static uint8_t *str_trame_sip_message = {
-          "MESSAGE sip:%s SIP/2.0\r\n" // user_to
-          "Via: SIP/2.0/UDP %s\r\n" // ip_src
-          "To: <sip:%s@%s:%s>\r\n" // user_to - ip_dst - port_dst
-          "From: <sip:%s@%s:%s>\r\n" // user_from - ip_src - port_src
+          "MESSAGE sip:%s@%s:%s SIP/2.0\r\n" // user_to - ip_dst - port_dst
+          "Max-Forwards: 70\r\n"
+          "Via: SIP/2.0/UDP %s:%s\r\n" // ip_src port_src
+          "From: %s <sip:%s@%s:%s>;tag=%s\r\n" // user_from - user_from - ip_src - port_src - tag
+          "To: %s <sip:%s@%s:%s>\r\n" // user_to user_to - ip_dst - port_dst
           "CSeq: 1 MESSAGE\r\n"
-          "Call-ID: %s@%s\r\n" //uuid - ip_dst
+          "Call-ID: %s\r\n" //uuid
+          "Contact: sip:%s@%s:%s\r\n" //user_from - ip_src - port_src
+          "Content-Type: text/plain\r\n"
           "Content-Length: %d\r\n" // size_msg(int)
           "User-Agent: SMSC\r\n"
           "\r\n"
-          "%s\r\n" //msg
+          "%s" //msg
       };
 
 uint8_t* create_trame_sip_message(uint8_t *ip_dst, uint8_t *port_dst, uint8_t *ip_src, uint8_t *port_src, uint8_t *user_from, uint8_t *user_to, uint8_t *msg){
-    uint8_t uuid[] = { "bb27bf00-6329-11e3-b17c-0002a5d5c51b" };
+    //uint8_t uuid[] = { "bb27bf00-6329-11e3-b17c-0002a5d5c51b" };
+    uint8_t uuid[] = { "bb27bf00-6329-dfdf" };
+    uint8_t tag[] = { "tag543" };
     uint8_t *str_trame = (uint8_t*)calloc(2048,sizeof(uint8_t));
-    sprintf(str_trame,str_trame_sip_message,user_to,ip_src,user_to,ip_dst,port_dst,user_from,ip_src,port_src,uuid,ip_dst,strlen((char*)msg),msg);
+    sprintf(str_trame,str_trame_sip_message,
+		user_to,ip_dst,port_dst,
+		ip_src,port_src,
+		user_from,user_from,ip_src,port_src,tag,
+		user_to,user_to,ip_dst,port_dst,
+		uuid,
+		user_from,ip_src,port_src,
+		strlen((char*)msg),
+		msg);
     return (uint8_t*) str_trame;
 }
 
@@ -82,8 +95,8 @@ uint8_t* create_trame_sip_message(uint8_t *ip_dst, uint8_t *port_dst, uint8_t *i
 */
 static uint8_t *str_trame_sip_200_ok = {
           "SIP/2.0 200 OK\r\n"
-          "From: <sip:%s@%s:%s>\r\n" //user_from - ip_src - port_src
-          "To: <sip:%s@%s:%s>\r\n" // user_to - ip_dst - port_dst
+          "From: sip:%s@%s:%s\r\n" //user_from - ip_src - port_src
+          "To: sip:%s@%s:%s\r\n" // user_to - ip_dst - port_dst
           "%s\r\n" //call_id
           "CSeq: 1 MESSAGE\r\n"
           "Via: SIP/2.0/UDP %s:%s;alias;received=%s:%s\r\n" // ip_dst - port_dst - ip_src - port_src

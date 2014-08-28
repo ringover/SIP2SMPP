@@ -273,7 +273,7 @@ static void* gestionSIP_send(void *data){
 
         trame_sip = create_trame_sip_message(sip_dest_ini.sip_dest_ip, sip_dest_ini.sip_dest_port,
                           sip_local_ini.sip_local_ip, sip_local_ini.sip_local_port,
-                          sms->dst, sms->src, sms->msg);
+                          sms->src, sms->dst, sms->msg);
 		
         if(trame_sip && strlen((char*)trame_sip) > 0){
             sip_send_message(p_sip_socket, trame_sip, sip_dest_ini.sip_dest_ip, sip_dest_ini.sip_dest_port);
@@ -492,7 +492,11 @@ int main(int argc,char **argv){
             }
             while(i-- > 0){
                 sms_set(db_t,(const uint8_t*)&src,(const uint8_t*)&dst,(const uint8_t*)&msg);
-                size_sip++;
+                if(db_t == DB_TYPE_SIP){
+                    size_sip++;
+                }else if(db_t == DB_TYPE_SMPP){
+                    size_smpp++;
+                }
             }
         }else if(strncmp((char*)str,(char*)"size_list",9) == 0){
             printf("size_smpp : %d", size_smpp);

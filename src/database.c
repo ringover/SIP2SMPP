@@ -222,8 +222,6 @@ int db_update_sms_send(db_pending pending, SMS *sms){
 		return -1;
 	}
 	
-	//sleep(5000*sms->ttl) ???
-
 	result = dbi_conn_queryf(conn,query_update_sms_send,pending,sms->ttl,sms->id);
 
 	if(!result){

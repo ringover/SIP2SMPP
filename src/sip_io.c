@@ -126,12 +126,15 @@ error_sip sip_send_message(sip_socket *p_sip_socket, uint8_t *buffer, uint8_t *i
        (p_sip_socket->type_bind == SIP_BIND_TRANSMITTER || p_sip_socket->type_bind == SIP_BIND_TRANSCEIVER) && 
        buffer && strlen((char*)buffer) > 0 && 
        ip_addr && strlen((char*)ip_addr) > 0 &&
-       port > 0 && port < UINT16_MAX &&
-       udp_send(p_sip_socket->sock, (char*)buffer, sizeof(buffer), ip_addr, atoi(port)) == 0
-       ){
-            return (error_sip) SIP_ERROR_NO;
+       atoi(port) >= 0 && atoi(port) < UINT16_MAX ){
+            if(udp_send(p_sip_socket->sock, (uint8_t*)buffer, strlen((char*)buffer), ip_addr, (uint16_t)atoi(port)) == 0){
+                INFO(LOG_SCREEN, "sip message send");
+                return (error_sip) SIP_ERROR_NO;
+            }
+            ERROR(LOG_SCREEN | LOG_FILE, "sip message don't send");
+    }else{
+        ERROR(LOG_SCREEN | LOG_FILE, "error in config sip message");
     }
-    ERROR(LOG_SCREEN | LOG_FILE, "sip message don't send");
     return (error_sip) SIP_ERROR_SEND;
 }
 

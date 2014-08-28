@@ -18,6 +18,8 @@ extern "C" {
 #include <sys/types.h>
 #include <unistd.h>
 
+#include "../../log/log.h"
+
 void do_udp_close(int sock);
 
 int32_t do_udp_connect(int *sock, uint8_t *addrIP, uint16_t port);

@@ -4,20 +4,20 @@
 extern int  smpp34_errno;
 extern char smpp34_strerror[2048];
 
-static uint8_t  print_buffer[2048];
-static uint8_t  local_buffer[2048];
-static int32_t  local_buffer_len_smpp = 0;
-static int32_t  ret = 0;
-static uint32_t tempo = 0;
+uint8_t  print_buffer[2048];
+uint8_t  local_buffer[2048];
+int32_t  local_buffer_len_smpp = 0;
+int32_t  ret = 0;
+uint32_t tempo = 0;
 
-static int32_t pack_and_send(int sock_tcp, void *req);
-static int32_t recv_and_unpack(int sock_tcp, void *res);
+int32_t pack_and_send(int sock_tcp, void *req);
+int32_t recv_and_unpack(int sock_tcp, void *res);
 
-static int32_t pack_and_send(int sock_tcp, void *req){
+int32_t pack_and_send(int sock_tcp, void *req){
     /* Linealize PDU to buffer ********************************************/
     memset(local_buffer, 0, sizeof(local_buffer));
     ret = smpp34_pack2( local_buffer, sizeof(local_buffer),
-                                            &local_buffer_len_smpp, (void*)&req);
+                                            &local_buffer_len_smpp, (void*)req);
     if(ret != 0){
         ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_pack():%d:\n%s\n", smpp34_errno, smpp34_strerror)
         return(int32_t) -1;
@@ -25,7 +25,7 @@ static int32_t pack_and_send(int sock_tcp, void *req){
     if(log_get_display() >= LOG_INFO){
         /* Print PDU **********************************************************/
         memset(print_buffer, 0, sizeof(print_buffer));
-        ret = smpp34_dumpPdu2( print_buffer, sizeof(print_buffer), (void*)&req);
+        ret = smpp34_dumpPdu2( print_buffer, sizeof(print_buffer), (void*)req);
         if(ret != 0){
             ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_dumpPdu():%d:\n%s\n", smpp34_errno, smpp34_strerror)
             return(int32_t) -1;
@@ -54,13 +54,11 @@ static int32_t pack_and_send(int sock_tcp, void *req){
 int32_t recv_and_unpack(int sock_tcp, void *res){
     memset(local_buffer, 0, sizeof(local_buffer));
     /* Read from socket ****************************************************/
-    ret = recv(sock_tcp, local_buffer, 1, MSG_PEEK);
-///////////////////////////////////////////////////
-//////////////        TODO      ///////////////////
-///////////////////////////////////////////////////
-ERROR(LOG_SCREEN, "ret peek %d[%s] ",ret,local_buffer);
-    if(ret != 1){
+    ret = recv(sock_tcp, local_buffer, 4, MSG_PEEK);
+
+    if(ret != 4){
         ERROR(LOG_FILE | LOG_SCREEN, "Error in recv(PEEK)\n")
+	//...
         return(int32_t) -1;
     }
     memcpy(&tempo, local_buffer, sizeof(uint32_t)); /* get lenght PDU */
@@ -83,7 +81,7 @@ ERROR(LOG_SCREEN, "ret peek %d[%s] ",ret,local_buffer);
                          "RECEIVE BUFFER \n%s\n", print_buffer);
     }
     /* unpack PDU *********************************************************/
-    ret = smpp34_unpack2((void*)&res, local_buffer, local_buffer_len_smpp);
+    ret = smpp34_unpack2((void*)res, local_buffer, local_buffer_len_smpp);
     if(ret != 0){
         ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_unpack():%d:%s\n", smpp34_errno, smpp34_strerror)
         return(int32_t) -1;
@@ -91,7 +89,7 @@ ERROR(LOG_SCREEN, "ret peek %d[%s] ",ret,local_buffer);
     if(log_get_display() >= LOG_INFO){
         /* Print PDU **********************************************************/
         memset(print_buffer, 0, sizeof(print_buffer));
-        ret = smpp34_dumpPdu2(print_buffer, sizeof(print_buffer), (void*)&res);
+        ret = smpp34_dumpPdu2(print_buffer, sizeof(print_buffer), (void*)res);
         if(ret != 0){
             ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_dumpPdu():%d:\n%s\n", smpp34_errno, smpp34_strerror);
             return(int32_t) -1;
@@ -278,43 +276,76 @@ int32_t do_smpp_receive_message(int sock_tcp, uint8_t **src_addr, uint8_t **dst_
     int local_buffer_len = 0;
     fd_set input_set;
     struct timeval timeout;
-    deliver_sm_t     deliv_sm;
-    memset(&deliv_sm, 0, sizeof(deliver_sm_t));
+    data_sm_t       req;
+    data_sm_resp_t  res;
+    memset(&res, 0, sizeof(data_sm_resp_t));
+    memset(&req, 0, sizeof(data_sm_t));
     timeout.tv_sec  = 0;
     timeout.tv_usec = 250;
     
     FD_ZERO(&input_set);
     FD_SET(sock_tcp,&input_set);
-    
+   
+    res.command_length = 0;
+    res.command_id = ESME_ROK;
+ 
     if((ret = select(sock_tcp + 1,&input_set,NULL,NULL,&timeout)) < 0){
         ERROR(LOG_SCREEN | LOG_FILE ,"Error in select socket")
         return (int32_t) -1;
     }
     
     if(ret > 0){
-        if(recv_and_unpack(sock_tcp, (void*)&deliv_sm) == -1){
+        if(recv_and_unpack(sock_tcp, (void*)&req) == -1){
             return (int32_t) -1;
         }
+printf("TODO (DELIV) %d[%d]", req.command_id, req.command_status);
 
-        if(deliv_sm.command_id != DELIVER_SM || deliv_sm.command_status != ESME_ROK){
-            ERROR(LOG_SCREEN | LOG_FILE ,"Error in DELIVER_SM[%d:%d]", deliv_sm.command_id, deliv_sm.command_status)
-            return (int) -1;
+	switch(req.command_id){
+        case DELIVER_SM :
+        {   //copy SMS
+            deliver_sm_t *deliver = (deliver_sm_t*)&res;
+            if(strlen((char*)deliver->source_addr)>0 && strlen((char*)deliver->destination_addr)>0 && strlen((char*)deliver->short_message)>0){
+                *src_addr = (char*)calloc(strlen((char*)deliver->source_addr)+1,sizeof(char));
+                strcpy((char*)*src_addr,(char*)deliver->source_addr);
+
+                *dst_addr = (char*)calloc(strlen((char*)deliver->destination_addr)+1,sizeof(char));
+                strcpy((char*)*dst_addr,(char*)deliver->destination_addr);
+
+                *message = (char*)calloc(strlen((char*)deliver->short_message)+1,sizeof(char));
+                strcpy((char*)*message,(char*)deliver->short_message);
+                return (int) 0;
+            }else{
+                ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid SMS")
+            }
+            res.command_id = DELIVER_SM_RESP;
+        }
+            break;
+        case UNBIND  :
+            res.command_id = UNBIND_RESP;
+            break;
+        case ENQUIRE_LINK :
+            res.command_id = ENQUIRE_LINK_RESP;
+            break;
+        default:
+            res.command_id = DATA_SM_RESP;
+            ERROR(LOG_SCREEN | LOG_FILE ,"Request not implemented [%d:%d]", req.command_id, req.command_status)
+            break;
         }
 
-        //copy SMS
-        if(strlen((char*)deliv_sm.source_addr)>0 && strlen((char*)deliv_sm.destination_addr)>0 && strlen((char*)deliv_sm.short_message)>0){
-            *src_addr = (char*)calloc(strlen((char*)deliv_sm.source_addr)+1,sizeof(char));
-            strcpy((char*)*src_addr,(char*)deliv_sm.source_addr);
+        res.sequence_number = req.sequence_number;
 
-            *dst_addr = (char*)calloc(strlen((char*)deliv_sm.destination_addr)+1,sizeof(char));
-            strcpy((char*)*dst_addr,(char*)deliv_sm.destination_addr);
-
-            *message = (char*)calloc(strlen((char*)deliv_sm.short_message)+1,sizeof(char));
-            strcpy((char*)*message,(char*)deliv_sm.short_message);
-            return (int) 0;
+        if(pack_and_send(sock_tcp, (void*)&res) == -1){
+            ERROR(LOG_SCREEN | LOG_FILE ,"Error in SM_RESP")
+            return (int32_t) -1;
         }else{
-            ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid SMS")
+            return (int32_t) req.command_id;
         }
+
+//        if(req.command_id != DELIVER_SM || req.command_status != ESME_ROK){
+//            ERROR(LOG_SCREEN | LOG_FILE ,"Error in DELIVER_SM[%d:%d]", deliv_sm.command_id, deliv_sm.command_status)
+//            return (int) -1;
+//        }
+
     }
     return (int) -1;
 }

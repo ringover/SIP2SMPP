@@ -72,22 +72,23 @@ int32_t udp_send(int sock, uint8_t* buffer, size_t buffer_len, uint8_t* addrIP, 
 
     //to.sin_addr.s_addr = inet_addr(addrIP);
     if(inet_aton(addrIP,&(to.sin_addr))==0){
-        printf("address IP is invalid\n");
+        ERROR(LOG_SCREEN | LOG_FILE ,"IP address is invalid\n")
     }
     to.sin_family      = AF_INET;
     to.sin_port        = htons(port);
         
     tosize = sizeof to;
 		
-    printf("-------------------------SIP Message-----------------------\n");
-    printf("%s\n",buffer);
-    printf("-----------------------------------------------------------\n");
+    ERROR(LOG_SCREEN | LOG_FILE, 
+                   "-------------------------SIP Message-----------------------\n"
+                   "%s\n"
+                   "-----------------------------------------------------------\n", buffer)
 
     if((n = sendto(sock, buffer, buffer_len, 0, (struct sockaddr*)&to, (socklen_t)tosize)) < 0){
-        printf("Error in sendto() : %d\n",n);
+        ERROR(LOG_SCREEN | LOG_FILE, "Error in sendto() : %d", n)
         return (int32_t)-1;
     }
-    printf("sendto() : %d\n",n);
+    INFO(LOG_SCREEN | LOG_FILE, "The UDP message is send [size : %d]", n)
     //buffer[n] = '\0';
     return (int32_t)0;
 }
