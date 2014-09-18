@@ -227,28 +227,30 @@ sem_t mutex_sip;
 *  \brief This function is used for transfer all SMS received to the SMS listend FIFO (SIP)
 */
 static void* gestionSIP_listend(void *data){
-	uint8_t *trame_sip = NULL;
-	sem_wait(&mutex_sip);
+  uint8_t *trame_sip = NULL;
+  sem_wait(&mutex_sip);
 	
   if(sip_receive_message(p_sip_socket,&trame_sip) == SIP_ERROR_NO && trame_sip && strlen((char*)trame_sip)>0){
-    uint8_t *buf_sip_ok = NULL;
-		SMS *sms = sip2sms((char*)trame_sip);
-		if(sms && (sms->dst) && (sms->src) && (sms->msg)){
-			sms_set(DB_TYPE_SMPP,sms->src,sms->dst,sms->msg);
-			size_smpp++;
-		}
+    if(strncmp((char*)trame_sip,(char*)"MESSAGE",7) == 0){
+      uint8_t *buf_sip_ok = NULL;
+      SMS *sms = sip2sms((char*)trame_sip);
+      if(sms && (sms->dst) && (sms->src) && (sms->msg)){
+        sms_set(DB_TYPE_SMPP,sms->src,sms->dst,sms->msg);
+        size_smpp++;
+      }
 
-		buf_sip_ok = create_trame_sip_200_ok(sip_dest_ini.sip_dest_ip, sip_dest_ini.sip_dest_port,
-		      			    sip_local_ini.sip_local_ip, sip_local_ini.sip_local_port,
-					          sms->dst, sms->src, get_call_id(trame_sip));
-    sip_send_message(p_sip_socket, buf_sip_ok, sip_dest_ini.sip_dest_ip, sip_dest_ini.sip_dest_port);
+      buf_sip_ok = create_trame_sip_200_ok(sip_dest_ini.sip_dest_ip, sip_dest_ini.sip_dest_port,
+                                         sip_local_ini.sip_local_ip, sip_local_ini.sip_local_port,
+                                         sms->dst, sms->src, get_call_id(trame_sip));
+      sip_send_message(p_sip_socket, buf_sip_ok, sip_dest_ini.sip_dest_ip, sip_dest_ini.sip_dest_port);
 
-		free_sms(&sms);
-		free(trame_sip);
-    if(buf_sip_ok){
+      free_sms(&sms);
+      free(trame_sip);
+      if(buf_sip_ok){
         free(buf_sip_ok);
+      }
     }
-	}
+  }
 	
 	sem_post(&mutex_sip);
 	return 0;

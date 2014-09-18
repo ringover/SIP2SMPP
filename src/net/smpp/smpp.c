@@ -51,13 +51,17 @@ int32_t pack_and_send(int sock_tcp, void *req){
     }
 }
 
+bool peek = true;
 int32_t recv_and_unpack(int sock_tcp, void *res){
     memset(local_buffer, 0, sizeof(local_buffer));
     /* Read from socket ****************************************************/
     ret = recv(sock_tcp, local_buffer, 4, MSG_PEEK);
 
     if(ret != 4){
-        ERROR(LOG_FILE | LOG_SCREEN, "Error in recv(PEEK)\n")
+	if(peek){
+	        ERROR(LOG_FILE | LOG_SCREEN, "Error in recv(PEEK)\n")
+		peek = false;
+	}
 	//...
         return(int32_t) -1;
     }
@@ -298,12 +302,11 @@ int32_t do_smpp_receive_message(int sock_tcp, uint8_t **src_addr, uint8_t **dst_
         if(recv_and_unpack(sock_tcp, (void*)&req) == -1){
             return (int32_t) -1;
         }
-printf("TODO (DELIV) %d[%d]", req.command_id, req.command_status);
 
 	switch(req.command_id){
         case DELIVER_SM :
         {   //copy SMS
-            deliver_sm_t *deliver = (deliver_sm_t*)&res;
+            deliver_sm_t *deliver = (deliver_sm_t*)&req;
             if(strlen((char*)deliver->source_addr)>0 && strlen((char*)deliver->destination_addr)>0 && strlen((char*)deliver->short_message)>0){
                 *src_addr = (char*)calloc(strlen((char*)deliver->source_addr)+1,sizeof(char));
                 strcpy((char*)*src_addr,(char*)deliver->source_addr);
@@ -313,7 +316,6 @@ printf("TODO (DELIV) %d[%d]", req.command_id, req.command_status);
 
                 *message = (char*)calloc(strlen((char*)deliver->short_message)+1,sizeof(char));
                 strcpy((char*)*message,(char*)deliver->short_message);
-                return (int) 0;
             }else{
                 ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid SMS")
             }
