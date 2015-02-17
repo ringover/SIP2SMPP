@@ -22,18 +22,25 @@ extern "C"{
 #include "./libsmpp34/smpp34_structs.h"
 #include "./libsmpp34/smpp34_params.h"
 
+#include "../net_struct.h"
+
 #include "../../tools.h"
 #include "../../log/log.h"
 
-int32_t do_smpp_connect_transceiver(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src);
-int32_t do_smpp_connect_receiver(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src);
-int32_t do_smpp_connect_transmitter(int sock_tcp, uint8_t *user, uint8_t *passwd, uint8_t *system_type, uint8_t ton_src, uint8_t npi_src);
+#define RESP 0x80000000
 
-int32_t do_smpp_send_message(int sock_tcp, uint8_t *src_addr, uint8_t *dst_addr, uint8_t *message, uint8_t ton_src, uint8_t npi_src, uint8_t ton_dst, uint8_t npi_dst);
+//Connect
+int do_smpp_bind(socket_t *sock, int bind, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src);
+int do_smpp_bind_transceiver(socket_t *sock, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src);
+int do_smpp_bind_receiver(socket_t *sock, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src);
+int do_smpp_bind_transmitter(socket_t *sock, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src);
 
-int32_t do_smpp_receive_message(int sock_tcp, uint8_t **src_addr, uint8_t **dst_addr, uint8_t **message);
+//Send / Receive SMS
+int do_smpp_send_sms(socket_t *sock, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *message, int ton_src, int npi_src, int ton_dst, int npi_dst);
+int do_smpp_receive_sms(socket_t *sock, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **message);
 
-int32_t do_smpp_close(int sock_tcp);
+//Close smpp
+int do_smpp_unbind(socket_t *sock);
 
 #endif
 

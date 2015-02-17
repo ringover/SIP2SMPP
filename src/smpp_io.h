@@ -18,66 +18,70 @@ extern "C"{
 #include <string.h>
 #include <stdbool.h>
 
+#include "type_projet.h"
 #include "net/tcp/tcp.h"
 #include "net/smpp/smpp.h"
 #include "net/smpp/libsmpp34/smpp34.h"
 #include "net/smpp/libsmpp34/smpp34_structs.h"
 #include "net/smpp/libsmpp34/smpp34_params.h"
 
-typedef enum error_smpp{
-        SMPP_ERROR_NO         = 0x00,
-        SMPP_ERROR_SEND       = 0x01,
-        SMPP_ERROR_RECEIVE    = 0x02,
-        SMPP_ERROR_BIND       = 0x04,
-        SMPP_ALREADY_CONNECT  = 0x08,
-        SMPP_IS_NOT_CONNECT   = 0x10,
-        SMPP_ERROR_CONNECT    = 0x20,
-        SMPP_NO_MESSAGE       = 0x40,
-        SMPP_ERROR_GENERAL    = 0xFF
-} error_smpp;
+#include "linked_list/map.h"
 
-typedef enum _smpp_bind_status{
-        SMPP_CONNECT    = true,
-        SMPP_DISCONNECT = false
-} smpp_bind_status;
-
-typedef enum _type_bind_smpp_enum{
-        SMPP_BIND_NONE         = 0,
-        SMPP_BIND_RECEIVER     = 1,
-        SMPP_BIND_TRANSMITTER  = 2,
-        SMPP_BIND_TRANSCEIVER  = 3
-} type_bind_smpp_enum;
-
-type_bind_smpp_enum type_bind_smpp_str_to_enum(uint8_t *str_in);
-uint8_t* type_bind_smpp_enum_to_str(type_bind_smpp_enum num);
+//Status SMPP
+#define   SMPP_CONNECT    true
+#define   SMPP_DISCONNECT false
 
 typedef struct _smpp_socket{
-    smpp_bind_status status;
-    uint16_t  type_bind;
-    int       sock;
-    uint8_t  *ip_addr;
-    uint16_t  port;
-    uint8_t  *user;
-    uint8_t  *passwd;
-    uint8_t  *system_type;
-    int8_t   ton_src;
-    int8_t   npi_src;
-    int8_t   ton_dst;
-    int8_t   npi_dst;
+    //connect/Disconnect
+    bool      status;
+    //Transceiver/Receiver/Transmitter
+    uint16_t  bind;
+    //socket smpp
+    socket_t  *sock;
+    //Remote server
+    unsigned char *ip_remote;
+    unsigned int   port_remote;
+    //Login/Password
+//    unsigned char user[16];
+//    unsigned char passwd[9];
+    unsigned char *user;
+    unsigned char *passwd;
+    //interface_name
+    unsigned char *interface_name;
+    //Other informations
+    uint8_t  *system_type;//Type of ESME : WWW - EMAIL - VMS - OTA - etc
+    int8_t   ton_src;//Type Of Number(0-6)
+    int8_t   npi_src;//Numeric Plan Indicaor(0-18)
+    int8_t   ton_dst;//Type Of Number(0-6)
+    int8_t   npi_dst;//Numeric Plan Indicaor(0-18)
 } smpp_socket;
 
-smpp_socket* new_smpp_socket(uint8_t *ip_addr, uint16_t port, uint8_t *user, uint8_t *passwd, type_bind_smpp_enum type_bind, uint8_t *system_type, int8_t ton_src, int8_t npi_src, int8_t ton_dst, int8_t npi_dst);
+smpp_socket* new_smpp_socket(unsigned char *interface_name, unsigned char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, int bind, unsigned char *system_type, int ton_src, int npi_src, int ton_dst, int npi_dst);
 
-void free_smpp_socket(smpp_socket **p_smpp_socket);
+void smpp_socket_free(smpp_socket **p_smpp_socket);
 
-error_smpp smpp_start_connection(smpp_socket *p_smpp_socket);
-error_smpp smpp_restart_connection(smpp_socket *p_smpp_socket);
-error_smpp smpp_end_connection(smpp_socket *p_smpp_socket);
+int smpp_start_connection(smpp_socket *p_smpp_socket);
+int smpp_restart_connection(smpp_socket *p_smpp_socket);
+int smpp_end_connection(smpp_socket *p_smpp_socket);
 
-error_smpp smpp_send_message(smpp_socket *p_smpp_socket, uint8_t *from_msisdn, uint8_t *to_msisdn, uint8_t *msg);
-error_smpp smpp_receive_message(smpp_socket *p_smpp_socket, uint8_t **from_msisdn, uint8_t **to_msisdn, uint8_t **msg);
+int smpp_send_sms(smpp_socket *p_smpp_socket, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg);
+int smpp_receive_sms(smpp_socket *p_smpp_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **msg);
 
-void display_smpp_message(uint8_t *from_msisdn, uint8_t *to_msisdn, uint8_t *msg);
+void display_sms(unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg);
+
+int send_sms_to_smpp(unsigned char* interface_name, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg);
+int send_sms_to_smpp_interface(unsigned char* interface_name_src, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg, unsigned char* interface_name_dst);
+
+/**
+ * Used for MAP and LIST
+ */
+
+extern map *map_str_smpp;
+
+void  free_smpp_socket(void **p_p_data);
+void* copy_smpp_socket(const void *p_data);
+int   compare_smpp_socket(const void *p_data1, const void *p_data2);
+
 
 #endif
 

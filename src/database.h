@@ -15,48 +15,26 @@ extern "C"{
 #include <stdint.h>
 #include <sys/time.h>
 #include <math.h>
-#include <dbi/dbi.h>
+#include <zdb/Exception.h>
+#include <zdb/SQLException.h>
+#include <zdb/zdb.h>
 
 #include "sms_struct.h"
 #include "log/log.h"
 #include "type_projet.h"
 #include "ini/iniFile.h"
 
-typedef enum _db_type{
-        DB_TYPE_SMPP = 1,
-        DB_TYPE_SIP  = 2
-}db_type;
-
-typedef enum _db_pending{
-        DB_PENDING_FALSE = 0,
-        DB_PENDING_TRUE  = 1
-}db_pending;
-
 /**
- * The connection to DBMS
+ * The status of SMS to send
  */
-static dbi_conn *conn    = NULL;
-
-/**
- * Statement DB
- */
-static char *create_stmts = {
-        "CREATE TABLE IF NOT EXISTS sms_send ("
-                "id INTEGER PRIMARY KEY, "
-                "type TINYINT, "                //type         : 1=SMPP    | 2=SIP
-		"ttl TINYINT, "			//time to live : 3 by default 
-                "pending TINYINT, "             //pending      : 0=no_send | 1=send_in_progress
-                "src VARCHAR(50), "
-                "dst VARCHAR(50), "
-                "msg VARCHAR(200)"
-                ")"
-        };
-
+typedef enum _db_status{
+        PENDING = 0,
+        ONGOING = 1
+}db_status;
 
 /**
  * Function DB
  */
-void db_error_func(dbi_conn conn, void *data);
 int db_init(void);
 int db_close(void);
 int db_prepare(void);
@@ -64,20 +42,12 @@ int db_prepare(void);
 /**
  * Function Query
  */
-int db_select_sms_send(db_type type, db_pending pending,SMS *sms);
-SMS* db_select_sms_send_id(int id);
-int db_insert_sms_send(db_pending pending, db_type type, const uint8_t *src, const uint8_t *dst, const uint8_t *msg);
-int db_update_sms_send(db_pending pending, SMS *sms);
-int db_delete_sms_send(const SMS *sms);
-
-/**
- * Function used
- */
-int sms_set(db_type type, const uint8_t *src, const uint8_t *dst, const uint8_t *msg);
-int sms_get(db_type type, SMS *sms);
-int sms_count(db_type type);
-int sms_cls(SMS *sms);
-int sms_rm(const SMS *sms);
+long long int db_insert_sms(unsigned char *interface, unsigned char *ip_origin, unsigned int port_origin, unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status, int ttl);
+int db_delete_sms_by_id(long long int id);
+int db_update_sms_status_by_id(long long int id, db_status new_status);
+int db_update_sms_ttl_by_id(long long int id, int new_ttl);
+int db_select_sms_count(db_status status, int *count_out);
+long long int db_select_sms_get(unsigned char *interface, unsigned char *ip_origin, unsigned int port_origin, unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status, int *ttl);
 
 #endif
 

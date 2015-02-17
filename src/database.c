@@ -1,367 +1,333 @@
 
 #include "database.h"
 
-/**
- * Query
- */
+//////////////////////////////
+// Statement DB
+///////////
+static char *create_stmts = {
+        "CREATE TABLE IF NOT EXISTS sms ("
+                "id INTEGER PRIMARY KEY, "
+                "interface VARCHAR(64), "
+                "ip_origin VARCHAR(20), "
+                "port_origin INTEGER, "
+                "ttl TINYINT, "             //time to live : 3 by default 
+                "status TINYINT, "          //PENDING(0) || ONGOING(1)
+                "src VARCHAR(64), "
+                "dst VARCHAR(64), "
+                "msg VARCHAR(1024)"
+                ")"
+        };
 
-static char *query_select_sms_send = {
-        "SELECT * FROM sms_send "
-        "WHERE type=%d AND pending=%d limit 1"
+//////////////////////////////
+// Queries
+///////////
+
+static char *query_get_sms_by_status = {
+        "SELECT * FROM sms WHERE status = %d LIMIT 1"
 };
 
-static char *query_count_sms_send = {
-        "SELECT COUNT(*) FROM sms_send "
-        "WHERE type=%d"
+static char *query_update_ttl_sms_by_id = {
+        "UPDATE sms SET ttl=%d WHERE sms.id %lld"
 };
 
-static char *query_select_sms_send_id = {
-        "SELECT * FROM sms_send "
-        "WHERE id=%d"
+static char *query_update_status_sms_by_id = {
+        "UPDATE sms SET status=%d WHERE sms.id = %lld"
 };
 
-static char *query_insert_sms_send = {
-        "INSERT INTO sms_send (type,ttl,pending,src,dst,msg) "
-        "VALUES(%d,%d,%d,'%s','%s','%s')"
+static char *query_delete_sms_by_id = {
+        "DELETE FROM sms WHERE sms.id = %lld"
 };
 
-static char *query_update_sms_send = {
-        "UPDATE sms_send SET pending=%d, ttl=%d "
-        "WHERE id=%d"
+static char *query_insert_sms = {
+        "INSERT INTO sms (interface,ip_origin,port_origin,ttl,status,src,dst,msg) "
+        "VALUES('%s','%s',%d,%d,%d,'%s','%s','%s')"
 };
-
-static char *query_delete_sms_send = {
-        "DELETE FROM sms_send "
-        "WHERE id=%d"
+static char *query_count_sms = {
+        "SELECT COUNT(*) AS count_sms FROM sms "
+        "WHERE status=%d"
 };
 
 /**
  * Function DB
  */
 
-void db_error_func(dbi_conn conn, void *data){
-	const char *msg;
-	dbi_conn_error(conn, &msg);
-	printf("DBI: %s\n", msg);
-	return;
-}
+#define DEF_URL "sqlite://%s?synchronous=normal&heap_limit=8096000&foreign_keys=on"
+//#define DEF_URL "sqlite://%s?synchronous=%s&heap_limit=%d&foreign_keys=%s&encoding=%s"
+static ConnectionPool_T pool = NULL;
+static URL_T url             = NULL;
+static char *str_url         = NULL;
+
 
 int db_init(void){
-	uint8_t str_dir_name[200] = "";
-	uint8_t str_path_db[200] = "";
-	strcpy((char*)str_dir_name,(char*)dbms_ini.db_path);
-	strcpy((char*)str_path_db,(char*)dbms_ini.db_path);
-	dbi_initialize(NULL);
-	
-	if(!dbms_ini.dbms_name){
-		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection.");
-                return -1;	
-	}
-	if(strcmp(dbms_ini.dbms_name,"sqlite3")!=0){
-		ERROR(LOG_SCREEN | LOG_FILE,"Only SQLite3 is supported.");
-		return -1;
-	}
+    int ret = 0;
+    if(!dbms_ini.dbms_name && !dbms_ini.db_path){
+        ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection.");
+        return -1;	
+    }
 
-	conn = dbi_conn_new(dbms_ini.dbms_name);
-	
-	if(conn == NULL) {
-		ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection with %s.",dbms_ini.dbms_name);
-		INFO( LOG_SCREEN | LOG_FILE,"db_path = %s",dbms_ini.db_path);
-		return -1;
-	}
-	
-	dbi_conn_error_handler(conn, db_error_func, NULL);
+    if(strcmp(dbms_ini.dbms_name,"sqlite3")!=0){
+        ERROR(LOG_SCREEN | LOG_FILE,"Only SQLite3 is supported.");
+        return -1;
+    }
 
-	dbi_conn_set_option(conn, "sqlite3_dbdir" , dirname( str_dir_name));
-	dbi_conn_set_option(conn, "dbname"        , basename(str_path_db));
-
-	if(dbi_conn_connect(conn) < 0){
-		return -1;
-	}
-	
-	INFO(LOG_SCREEN,"Connection to %s server is established.",dbms_ini.dbms_name);
-	return db_prepare();
+    str_url = (char*)calloc(strlen((char*)DEF_URL)+strlen((char*)dbms_ini.db_path),sizeof(char));
+    sprintf(str_url, DEF_URL, dbms_ini.db_path);
+    url  = URL_new(str_url);
+    pool = ConnectionPool_new(url);
+    ConnectionPool_start(pool);
+    ret = db_prepare();
+    
+    INFO(LOG_SCREEN,"Connection to %s server is established.",dbms_ini.dbms_name);
+    return ret;
 }
 
 int db_close(void){
-	dbi_conn_close(conn);
-	dbi_shutdown();
-	return 0;
+    ConnectionPool_free(&pool);
+    URL_free(&url);
+    free(str_url);
+    return 0;
 }
 
 int db_prepare(void){
-	dbi_result result;
-	
-	result = dbi_conn_query(conn, create_stmts);
-	if(!result){
-	   DEBUG(LOG_SCREEN | LOG_FILE,"Failed to create this table OR already created : %s", create_stmts);
-	}
-	dbi_result_free(result);
-
-	return 0;
+    int ret = 0;
+    Connection_T con = ConnectionPool_getConnection(pool);
+    TRY
+        Connection_execute(con, create_stmts);
+    CATCH(SQLException)
+        ERROR(LOG_SCREEN | LOG_FILE,"The statement of the table is failed");
+        ret = -1;
+    END_TRY;
+    Connection_close(con);
+    return (int) ret;
 }
 
 /**
  * Function Query
  */
 
-int db_select_sms_send(db_type type, db_pending pending, SMS *sms){
-	dbi_result result = NULL;
-
-	if(!sms){
-		DEBUG(LOG_SCREEN | LOG_FILE,"SMS failed ... The query does not apply\n");
-		return -1;
-	}
-	
-	result = dbi_conn_queryf(conn, query_select_sms_send, type, pending);
-	if(!result){
-		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...%s %s %s",query_select_sms_send, type, pending);
-		return -1;
-	}
-	
-	if(dbi_result_next_row(result)){
-		sms->src = dbi_result_get_string_copy(result,"src");
-		sms->dst = dbi_result_get_string_copy(result,"dst");
-		sms->msg = dbi_result_get_string_copy(result,"msg");
-		sms->ttl = dbi_result_get_int(result,"ttl");
-		sms->id  = dbi_result_get_int(result,"id");
-		DEBUG(LOG_SCREEN | LOG_FILE,"id: %d | pending: %d |%s -> %s : %s\n",sms->id,pending,sms->src,sms->dst,sms->msg);
-	}
-	
-	dbi_result_free(result);
-	return 0;
+long long int db_insert_sms(unsigned char *interface, unsigned char *ip_origin, unsigned int port_origin, unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status, int ttl){
+    int ret = 0;
+    Connection_T con = ConnectionPool_getConnection(pool);
+    TRY
+        //"INSERT INTO sms (interface,ip_origin,port_origin,ttl,status,src,dst,msg) "
+        Connection_execute(con, query_insert_sms, interface, ip_origin, port_origin, ttl, (int)status, msisdn_src, msisdn_dst, msg);
+        ret = Connection_lastRowId(con);
+    CATCH(SQLException)
+        ERROR(LOG_SCREEN | LOG_FILE,"The insert database is failed");
+        ret = -1;
+    END_TRY;
+    Connection_close(con);
+    return (long long int) ret;
 }
 
-SMS* db_select_sms_send_id(int id){
-	dbi_result result = NULL;
-	SMS *sms = (SMS*)malloc(sizeof(SMS)*1);
-	memset(sms,0,sizeof(SMS)*1);
-	
-	if(id<=0){
-		DEBUG(LOG_SCREEN | LOG_FILE,"ID wrong ... The query does not apply");
-		free(sms);
-		return NULL;
-	}
-
-	result = dbi_conn_queryf(conn, query_select_sms_send_id, id);
-	if(!result){
-		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...\n");
-		free(sms);
-		return NULL;
-	}
-	
-	if(dbi_result_next_row(result)){
-		sms->src = dbi_result_get_string_copy(result,"src");
-		sms->dst = dbi_result_get_string_copy(result,"dst");
-		sms->msg = dbi_result_get_string_copy(result,"msg");
-		sms->ttl = dbi_result_get_int(result,"ttl");
-		sms->id  = dbi_result_get_int(result,"id");
-
-		int pending = dbi_result_get_int(result,"pending");
-		DEBUG(LOG_SCREEN | LOG_FILE,"id: %d | pending: %d |%s -> %s : %s",sms->id,pending,sms->src,sms->dst,sms->msg);
-	}
-	
-	dbi_result_free(result);
-	return sms;
+int db_delete_sms_by_id(long long int id){
+    int ret = 0;
+    Connection_T con = ConnectionPool_getConnection(pool);
+    TRY
+        Connection_execute(con, query_delete_sms_by_id, id);
+    CATCH(SQLException)
+        ERROR(LOG_SCREEN | LOG_FILE,"The delete database is failed");
+        ret = -1;
+    END_TRY;
+    Connection_close(con);
+    return (int) ret;
 }
 
-int db_count_sms_send(db_type type){
-	dbi_result result = NULL;
-	int count = 0;
-
-	if(!(type == DB_TYPE_SIP || type == DB_TYPE_SMPP)){
-		DEBUG(LOG_SCREEN | LOG_FILE,"The query does not apply");
-		return -1;
-	}
-	
-	result = dbi_conn_queryf(conn, query_count_sms_send, type);
-	if(!result){
-		ERROR(LOG_SCREEN | LOG_FILE,"Query failed ...");
-		return -1;
-	}
-	
-	if(dbi_result_next_row(result)){
-		count = dbi_result_get_longlong(result,"COUNT(*)");
-	}
-	
-	dbi_result_free(result);
-	return count;
+int db_update_sms_status_by_id(long long int id, db_status new_status){
+    int ret = 0;
+    Connection_T con = ConnectionPool_getConnection(pool);
+    TRY
+        Connection_execute(con, query_update_status_sms_by_id, (int)new_status, id);
+    CATCH(SQLException)
+        ERROR(LOG_SCREEN | LOG_FILE,"The update database is failed");
+        ret = -1;
+    END_TRY;
+    Connection_close(con);
+    return (int) ret;
 }
 
-int db_insert_sms_send(db_pending pending, db_type type, const uint8_t *src, const uint8_t *dst, const uint8_t *msg){
-	dbi_result result;
-
-	if(!src || !dst || !msg){
-		DEBUG(LOG_SCREEN | LOG_FILE,"The query does not apply");
-		return -1;
-	}
-	
-	result = dbi_conn_queryf(conn,query_insert_sms_send,type,dbms_ini.db_ttl_sms,pending,src,dst,msg);
-	
-	if(!result){
-		ERROR(LOG_SCREEN | LOG_FILE,"Query failed...");
-	}
-
-	dbi_result_free(result);
-	return 0;
+int db_update_sms_ttl_by_id(long long int id, int new_ttl){
+    int ret = 0;
+    if(new_ttl > 0){
+        Connection_T con = ConnectionPool_getConnection(pool);
+        TRY
+            Connection_execute(con, query_update_ttl_sms_by_id, new_ttl, id);
+        CATCH(SQLException)
+            ERROR(LOG_SCREEN | LOG_FILE,"The update database is failed");
+            ret = -1;
+        END_TRY;
+        Connection_close(con);
+    }else{
+        db_delete_sms_by_id(id);
+    }
+    return (int) ret;
 }
 
-int db_update_sms_send(db_pending pending, SMS *sms){
-	dbi_result result;
-	
-	DEBUG(LOG_SCREEN | LOG_FILE,"db_ttl_sms = %s",dbms_ini.db_ttl_sms);
+int db_select_sms_count(db_status status, int *count_out){
+    int ret = -1;
+    if(count_out){
+        Connection_T con   = ConnectionPool_getConnection(pool);
+        ResultSet_T result = NULL;
+        TRY
+            result = Connection_executeQuery(con, query_count_sms, (int)status);
+            if(ResultSet_next(result)){
+                *count_out = ResultSet_getIntByName(result, "count_sms");
+            }else{
+                WARNING(LOG_SCREEN | LOG_FILE, "The return select database is empty");
+                *count_out = 0;
+            }
+            ret = 0;
+        CATCH(SQLException)
+            ERROR(LOG_SCREEN | LOG_FILE, "The select database is failed");
+            ret = -1;
+        END_TRY;
+        Connection_close(con);
+    }
+    return (int) ret;
+}
 
-	if(strcmp(dbms_ini.db_ttl_sms,"0") != 0){
-		if(--(sms->ttl) <= 0){
-			printf("SMS_TTL kill\n");
-			return db_delete_sms_send(sms);
-		}
-	}
-	if(!sms || (sms->id)==0){
-		DEBUG(LOG_SCREEN | LOG_FILE,"The query does not apply");
-		return -1;
-	}
-	
-	result = dbi_conn_queryf(conn,query_update_sms_send,pending,sms->ttl,sms->id);
+long long int db_select_sms_get(unsigned char *interface, unsigned char *ip_origin, unsigned int port_origin, unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status, int *ttl){
+    int ret = 0;
+    Connection_T con   = ConnectionPool_getConnection(pool);
+    ResultSet_T result = NULL;
+    TRY
+        //SELECT src, dst, msg, interface, ip_origin, port_origin
+        result = Connection_executeQuery(con, query_get_sms_by_status, (int)status);
+        if(ResultSet_next(result)){
+            const char *const_tmp = NULL;
+            ret         = ResultSet_getIntByName(result, "id");
 
-	if(!result){
-                ERROR(LOG_SCREEN | LOG_FILE,"Query failed...");
-		return -1;
+            *ttl        = ResultSet_getIntByName(result, "ttl");
+
+            const_tmp   = ResultSet_getStringByName(result, "interface");
+            interface   = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+            strcpy((char*)interface, (char*)const_tmp);
+
+            const_tmp   = ResultSet_getStringByName(result, "ip_origin");
+            ip_origin   = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+            strcpy((char*)ip_origin, (char*)const_tmp);
+
+            port_origin = ResultSet_getIntByName(result, "port_origin");
+
+            const_tmp   = ResultSet_getStringByName(result, "src");
+            msisdn_src  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+            strcpy((char*)msisdn_src, (char*)const_tmp);
+
+            const_tmp   = ResultSet_getStringByName(result, "dst");
+            msisdn_dst  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+            strcpy((char*)msisdn_dst, (char*)const_tmp);
+
+            const_tmp   = ResultSet_getStringByName(result, "msg");
+            msg         = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+            strcpy((char*)msg, (char*)const_tmp);
+        }else{
+            WARNING(LOG_SCREEN | LOG_FILE, "The return select database is empty");
         }
-
-	dbi_result_free(result);
-	return 0;
-}
-
-int db_delete_sms_send(const SMS *sms){
-	dbi_result result;
-	
-	if(!sms || (sms->id)==0){
-		DEBUG(LOG_SCREEN | LOG_FILE,"The query does not apply");
-		return -1;
-	}
-
-	result = dbi_conn_queryf(conn,query_delete_sms_send,sms->id);
-
-	if(!result){
-                ERROR(LOG_SCREEN | LOG_FILE,"Query failed...");
-		return -1;
-        }
-
-	dbi_result_free(result);
-	return 0;
-}
-
-/**
- * function used
- */
-
-/**
- * \brief This function allow to insert one SMS in the DB
- *
- * \param type	This parameter is the type of receive SMS (DB_TYPE_SMPP/DB_TYPE_SIP)
- * \param src	This parameter is the MSISDN source
- * \param src	This parameter is the MSISDN destination
- * \param src	This parameter is the SMS message
- */
-int sms_set(db_type type, const uint8_t *src, const uint8_t *dst, const uint8_t *msg){
-	if(db_insert_sms_send(DB_PENDING_FALSE, type, src, dst, msg)==0){
-		return 0;
-	}
-	return-1;
-}
-
-/**
- * \brief This function allow to count the number of SMS in the DB
- *
- * \param type	This parameter is the type of receive SMS (DB_TYPE_SMPP/DB_TYPE_SIP)
- */
-int sms_count(db_type type){
-	return db_count_sms_send(type);
-}
-
-/**
- * \brief
- *
- * \param type	This parameter is the type of receive SMS (DB_TYPE_SMPP/DB_TYPE_SIP)
- * \param sms	This parameter is the SMs struct (out)
- */
-int sms_get(db_type type, SMS *sms){
-	if(db_select_sms_send(type,DB_PENDING_FALSE,sms)==0){
-		if(db_update_sms_send(DB_PENDING_TRUE,sms)==0){
-			return 0;
-		}
-	}
-	return -1;
-}
-
-/**
- * \brief	This function reset the sms in the base if it is not send
- *		(DB_PENDING_TRUE -> DB_PENDING_FALSE) and decrease of the TTL
- *
- * \param sms   This parameter is the SMs struct (in) 
- */
-int sms_cls(SMS *sms){
-	if(db_update_sms_send(DB_PENDING_FALSE,sms)==0){
-		return 0;
-	}
-	return -1;
-}
-
-/**
- * \brief       This function delete the sms in the base if it is send
- *		(but the SMS pointer is not free)
- *
- * \param sms   This parameter is the SMs struct (in) 
- */
-int sms_rm(const SMS *sms){
-	if(db_delete_sms_send(sms)==0){
-		return 0;
-	}
-	return -1;
+    CATCH(SQLException)
+        ERROR(LOG_SCREEN | LOG_FILE, "The select database is failed");
+        ret = -1;
+    END_TRY;
+    Connection_close(con);
+    return (int) ret;
 }
 
 /*
-//Sample for how to use it
 int main(){
-	db_host = (char*) malloc(sizeof(char)*20);
-	db_host = "localhost";
-	db_basename = (char*) malloc(sizeof(char)*20);
-	db_basename = "sip2smpp";
-	db_username = (char*) malloc(sizeof(char)*20);
-	db_username = "root";
-	db_password = (char*) malloc(sizeof(char)*20);
-	db_password = "5rdpqkq6";
-	db_encoding = (char*) malloc(sizeof(char)*20);
-	db_encoding = "UTF-8";
-	
-	printf("The DB have %lu table(s)\n",sizearray(create_stmts));
-//	printf("%u\n", unique_id());
+    db_init();
 
-	db_init();
+    long long int id = db_insert_sms("SIP_IN_01", "192.168.10.1", 5090, "0630566333", "0624901020", "Msg de test assez court", PENDING, 5);
+    printf("id = %lld", id);
+    id = db_insert_sms("SIP_IN_01", "192.168.10.1", 5090, "0630566333", "0624901020", "Msg de test2 assez court", PENDING, 5);
+    printf("id = %lld", id);
 
-	db_insert_sms_send(DB_PENDING_FALSE,DB_TYPE_SMPP,"0624901020","0663335588","blabla");
-	
-	SMS sms;
-	sms.id = 0;
-
-	db_select_sms_send(DB_TYPE_SMPP,DB_PENDING_FALSE,&sms);
-	
-	db_update_sms_send(DB_PENDING_TRUE,&sms);
-
-	SMS *sms2 = db_select_sms_send_id(sms.id);
-	
-	db_delete_sms_send(sms2);
-
-	free(sms2);
-	free(db_host);
-	free(db_basename);
-	free(db_username);
-	free(db_password);
-	free(db_encoding);
-	db_close();
-
-	return 0;
+    db_close();
 }
 */
+/*
+static char *query_get_id_sms = {
+        "SELECT id FROM sms WHERE sms.src LIKE \"%s\" "
+        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" LIMIT 1"
+};
 
+static char *query_get_info_sms = {
+        "SELECT * FROM sms WHERE sms.src LIKE \"%s\" "
+        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" LIMIT 1"
+};
+
+static char *query_get_all_sms = {
+        "SELECT * FROM sms"
+};
+
+static char *query_get_all_sms_by_status_and_interface = {
+        "SELECT * FROM sms "
+        "WHERE interface=\"%s\" AND status=%d limit 1"
+};
+
+static char *query_get_sms_by_status = {
+        "SELECT * FROM sms WHERE status = %d LIMIT 1"
+};
+
+static char *query_get_all_sms_by_status = {
+        "SELECT * FROM sms WHERE status = %d"
+};
+
+static char *query_get_sms_by_id = {
+        "SELECT * FROM sms WHERE id = %d LIMIT 1"
+};
+
+static char *query_delete_sms = {
+        "DELETE FROM sms WHERE sms.src LIKE \"%s\" "
+        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" AND sms.status = %d LIMIT 1"
+};
+
+static char *query_update_ttl_sms = {
+        "UPDATE sms SET ttl=%d WHERE sms.src LIKE \"%s\" "
+        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" AND sms.status = %d LIMIT 1"
+};
+static char *query_update_status_sms = {
+        "UPDATE sms SET status=%d WHERE sms.src LIKE \"%s\" "
+        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" AND sms.status = %d LIMIT 1"
+};
+*/
+
+/*
+int db_delete_sms(unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status){
+    int ret = 0;
+    Connection_T con = ConnectionPool_getConnection(pool);
+    TRY
+        Connection_execute(con, query_delete_sms, msisdn_src, msisdn_dst, msg, (int)status);
+    CATCH(SQLException)
+        ERROR(LOG_SCREEN | LOG_FILE,"The delete database is failed");
+        ret = -1;
+    END_TRY;
+    Connection_close(con);
+    return (int) ret;
+}
+
+int db_update_sms_status(unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status old_status, db_status new_status){
+    int ret = 0;
+    Connection_T con = ConnectionPool_getConnection(pool);
+    TRY
+        Connection_execute(con, query_update_status_sms, (int)new_status, msisdn_src, msisdn_dst, msg, (int)old_status);
+    CATCH(SQLException)
+        ERROR(LOG_SCREEN | LOG_FILE,"The update database is failed");
+        ret = -1;
+    END_TRY;
+    Connection_close(con);
+    return (int) ret;
+}
+
+int db_update_sms_ttl(unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status, int new_ttl){
+    int ret = 0;
+    Connection_T con = ConnectionPool_getConnection(pool);
+    TRY
+        Connection_execute(con, query_update_ttl_sms, (int)new_ttl, msisdn_src, msisdn_dst, msg, (int)status);
+    CATCH(SQLException)
+        ERROR(LOG_SCREEN | LOG_FILE,"The update database is failed");
+        ret = -1;
+    END_TRY;
+    Connection_close(con);
+    return (int) ret;
+}
+
+*/

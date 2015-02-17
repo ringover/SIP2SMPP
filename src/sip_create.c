@@ -30,10 +30,19 @@ static uint8_t *str_trame_sip_202_accepted = {
           "Content-Length: 0\r\n"
         };
 
-uint8_t* create_trame_sip_202_accepted(uint8_t *ip_dst, uint8_t *port_dst, uint8_t *ip_src, uint8_t *port_src, uint8_t *user_from, uint8_t *user_to){
-    uint8_t *str_trame = (uint8_t*)calloc(2048,sizeof(uint8_t));
-    sprintf(str_trame,str_trame_sip_202_accepted,ip_src,user_from,ip_src,port_src,user_to,ip_dst,port_dst,ip_src,port_src);
-    return (uint8_t*) str_trame;
+int create_trame_sip_202_accepted(uint8_t **str_trame, uint8_t *ip_host, uint32_t port_host, uint8_t *ip_remote, uint32_t port_remote, uint8_t *user_from, uint8_t *user_to){
+    if(str_trame && ip_host && port_host > 0 && ip_remote && port_remote > 0 && user_from && user_to){
+        if(*str_trame == NULL){
+            *str_trame = (uint8_t*)calloc(2048,sizeof(uint8_t));
+        }
+        sprintf(*str_trame, str_trame_sip_202_accepted,
+                ip_host, 
+                user_from, ip_host, port_host,
+                user_to, ip_remote, port_remote,
+                ip_host, port_host);
+        return (int) 0;
+    }
+    return (int) -1;
 }
 
 /**
@@ -49,14 +58,14 @@ uint8_t* create_trame_sip_202_accepted(uint8_t *ip_dst, uint8_t *port_dst, uint8
 *
 */
 static uint8_t *str_trame_sip_message = {
-          "MESSAGE sip:%s@%s:%s SIP/2.0\r\n" // user_to - ip_dst - port_dst
+          "MESSAGE sip:%s@%s:%d SIP/2.0\r\n" // user_to - ip_dst - port_dst
           "Max-Forwards: 70\r\n"
-          "Via: SIP/2.0/UDP %s:%s\r\n" // ip_src port_src
-          "From: %s <sip:%s@%s:%s>;tag=%s\r\n" // user_from - user_from - ip_src - port_src - tag
-          "To: %s <sip:%s@%s:%s>\r\n" // user_to user_to - ip_dst - port_dst
+          "Via: SIP/2.0/UDP %s:%d\r\n" // ip_src port_src
+          "From: %s <sip:%s@%s:%d>;tag=%s\r\n" // user_from - user_from - ip_src - port_src - tag
+          "To: %s <sip:%s@%s:%d>\r\n" // user_to user_to - ip_dst - port_dst
           "CSeq: 1 MESSAGE\r\n"
           "Call-ID: %s\r\n" //uuid
-          "Contact: sip:%s@%s:%s\r\n" //user_from - ip_src - port_src
+          "Contact: sip:%s@%s:%d\r\n" //user_from - ip_src - port_src
           "Content-Type: text/plain\r\n"
           "Content-Length: %d\r\n" // size_msg(int)
           "User-Agent: SMSC\r\n"
@@ -64,21 +73,26 @@ static uint8_t *str_trame_sip_message = {
           "%s" //msg
       };
 
-uint8_t* create_trame_sip_message(uint8_t *ip_dst, uint8_t *port_dst, uint8_t *ip_src, uint8_t *port_src, uint8_t *user_from, uint8_t *user_to, uint8_t *msg){
-    //uint8_t uuid[] = { "bb27bf00-6329-11e3-b17c-0002a5d5c51b" };
-    uint8_t uuid[] = { "bb27bf00-6329-dfdf" };
-    uint8_t tag[] = { "tag543" };
-    uint8_t *str_trame = (uint8_t*)calloc(2048,sizeof(uint8_t));
-    sprintf(str_trame,str_trame_sip_message,
-		user_to,ip_dst,port_dst,
-		ip_src,port_src,
-		user_from,user_from,ip_src,port_src,tag,
-		user_to,user_to,ip_dst,port_dst,
-		uuid,
-		user_from,ip_src,port_src,
-		strlen((char*)msg),
-		msg);
-    return (uint8_t*) str_trame;
+int create_trame_sip_message(uint8_t **str_trame, uint8_t *ip_host, uint32_t port_host, uint8_t *ip_remote, uint32_t port_remote, uint8_t *user_from, uint8_t *user_to, uint8_t *msg){
+    if(str_trame && ip_host && port_host > 0 && ip_remote && port_remote > 0 && user_from && user_to && msg){
+        //uint8_t uuid[] = { "bb27bf00-6329-11e3-b17c-0002a5d5c51b" };
+        uint8_t uuid[] = { "bb27bf00-6329-dfdf" };
+        uint8_t tag[] = { "tag543" };
+        if(*str_trame == NULL){
+            str_trame = (uint8_t*)calloc(1536 + strlen((char*)msg), sizeof(uint8_t));
+        }
+        sprintf(*str_trame, str_trame_sip_message,
+            user_to,ip_remote,port_remote,
+            ip_host,port_host,
+            user_from,user_from,ip_host,port_host,tag,
+            user_to,user_to,ip_remote,port_remote,
+            uuid,
+            user_from,ip_host,port_host,
+            strlen((char*)msg),
+            msg);
+        return (int) 0;
+    }
+    return (int) -1;
 }
 
 /**

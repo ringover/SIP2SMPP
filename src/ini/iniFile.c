@@ -11,11 +11,11 @@
 static void _strcpy(uint8_t **str_out, uint8_t *str_in);
 static void _save_file_ini(section_flags sections);
 
-static ini_main       _main_ini;
-static ini_sip_dest   _sip_dest_ini;
-static ini_sip_local  _sip_local_ini;
-static ini_smpp       _smpp_ini;
-static ini_dbms       _dbms_ini;
+static ini_main   _main_ini;
+static ini_sip    _sip_remote_ini;
+static ini_sip    _sip_host_ini;
+static ini_smpp   _smpp_ini;
+static ini_dbms   _dbms_ini;
 
 void free_file_ini(section_flags sections){
   //main_ini
@@ -30,6 +30,10 @@ void free_file_ini(section_flags sections){
   }
   //smpp_ini
   if((SECTION_SMPP & sections) != 0){
+    if(smpp_ini.interface_name)
+        free(smpp_ini.interface_name);
+    smpp_ini.interface_name   = NULL;
+
     if(smpp_ini.pass_smpp)
         free(smpp_ini.pass_smpp);
     smpp_ini.pass_smpp        = NULL;
@@ -38,14 +42,16 @@ void free_file_ini(section_flags sections){
         free(smpp_ini.user_smpp);
     smpp_ini.user_smpp        = NULL;
 
-    if(smpp_ini.smpp_server_ip)
-        free(smpp_ini.smpp_server_ip);
-    smpp_ini.smpp_server_ip   = NULL;
+    if(smpp_ini.smpp_ip)
+        free(smpp_ini.smpp_ip);
+    smpp_ini.smpp_ip          = NULL;
 
-    if(smpp_ini.smpp_server_port)
-        free(smpp_ini.smpp_server_port);
-    smpp_ini.smpp_server_port = NULL;
+    smpp_ini.smpp_port        = 0;
 
+    smpp_ini.nb_client        = -1;
+    
+    smpp_ini.model            = MODEL_CLIENT;
+    
     smpp_ini.npi_src          = -1;
 
     smpp_ini.ton_src          = -1;
@@ -62,54 +68,60 @@ void free_file_ini(section_flags sections){
         free(smpp_ini.service_type);
     smpp_ini.service_type     = NULL;
 
-    smpp_ini.command_id = -1;
+    smpp_ini.command_id       = -1;
 
   }
   //sip_dest_ini
-  if((SECTION_SIP_DEST & sections) != 0){
-    if(sip_dest_ini.sip_dest_ip)
-        free(sip_dest_ini.sip_dest_ip);
-    sip_dest_ini.sip_dest_ip      = NULL;
+  if((SECTION_SIP_REMOTE & sections) != 0){
+    if(sip_remote_ini.interface_name)
+        free(sip_remote_ini.interface_name);
+    sip_remote_ini.interface_name   = NULL;
 
-    if(sip_dest_ini.sip_dest_port)
-        free(sip_dest_ini.sip_dest_port);
-    sip_dest_ini.sip_dest_port    = NULL;
+    sip_remote_ini.model            = MODEL_CLIENT;
+
+    if(sip_remote_ini.sip_ip)
+        free(sip_remote_ini.sip_ip);
+    sip_remote_ini.sip_ip           = NULL;
+
+    sip_remote_ini.sip_port         = 0;
   }
   //sip_local_ini
-  if((SECTION_SIP_LOCAL & sections) != 0){
-    if(sip_local_ini.sip_local_port)
-        free(sip_local_ini.sip_local_port);
-    sip_local_ini.sip_local_port   = NULL;
+  if((SECTION_SIP_HOST & sections) != 0){
+    if(sip_host_ini.interface_name)
+        free(sip_host_ini.interface_name);
+    sip_host_ini.interface_name   = NULL;
 
-    if(sip_local_ini.sip_local_ip)
-        free(sip_local_ini.sip_local_ip);
-    sip_local_ini.sip_local_ip     = NULL;
+    sip_host_ini.model            = MODEL_SERVER;
+
+    if(sip_host_ini.sip_ip)
+        free(sip_host_ini.sip_ip);
+    sip_host_ini.sip_ip           = NULL;
+    
+    sip_host_ini.sip_port         = 0;
   }
   //dbms_ini
   if((SECTION_DBMS & sections) != 0){
     if(dbms_ini.dbms_name)
         free(dbms_ini.dbms_name);
-    dbms_ini.dbms_name        = NULL;
+    dbms_ini.dbms_name       = NULL;
 
     if(dbms_ini.db_path)
         free(dbms_ini.db_path);
-    dbms_ini.db_path      = NULL;
-
-    if(dbms_ini.db_basename)
-        free(dbms_ini.db_basename);
-    dbms_ini.db_basename      = NULL;
-
-    if(dbms_ini.db_dirname)
-        free(dbms_ini.db_dirname);
-    dbms_ini.db_dirname       = NULL;
+    dbms_ini.db_path         = NULL;
 
     if(dbms_ini.db_encoding)
         free(dbms_ini.db_encoding);
-    dbms_ini.db_encoding      = NULL;
+    dbms_ini.db_encoding     = NULL;
 
-    if(dbms_ini.db_ttl_sms)
-        free(dbms_ini.db_ttl_sms);
-    dbms_ini.db_ttl_sms       = NULL;
+    if(dbms_ini.db_synchronous)
+        free(dbms_ini.db_synchronous);
+    dbms_ini.db_synchronous  = NULL;
+
+    dbms_ini.db_heap_limit   = 0;
+
+    dbms_ini.db_foreign_keys = 0;
+
+    dbms_ini.db_ttl_sms      = 0;
   }
 
     return;
@@ -125,20 +137,29 @@ static void _save_file_ini(section_flags sections){
     _main_ini.fork      = NULL;
   }
   if((SECTION_SMPP & sections) != 0){
+    smpp_ini.interface_name     = _smpp_ini.interface_name;
+    _smpp_ini.interface_name    = NULL;
+
+    smpp_ini.model              = _smpp_ini.model;
+    _smpp_ini.model             = 0;
+
     smpp_ini.pass_smpp          = _smpp_ini.pass_smpp;
     _smpp_ini.pass_smpp         = NULL;
 
     smpp_ini.user_smpp          = _smpp_ini.user_smpp;
     _smpp_ini.user_smpp         = NULL;
 
-    smpp_ini.smpp_server_ip     = _smpp_ini.smpp_server_ip;
-    _smpp_ini.smpp_server_ip    = NULL;
+    smpp_ini.smpp_ip            = _smpp_ini.smpp_ip;
+    _smpp_ini.smpp_ip           = NULL;
 
-    smpp_ini.smpp_server_port   = _smpp_ini.smpp_server_port;
-    _smpp_ini.smpp_server_port  = NULL;
+    smpp_ini.smpp_port          = _smpp_ini.smpp_port;
+    _smpp_ini.smpp_port         = 0;
 
     smpp_ini.npi_src            = _smpp_ini.npi_src;
     _smpp_ini.npi_src           = -1;
+
+    smpp_ini.nb_client          = _smpp_ini.nb_client;
+    _smpp_ini.nb_client         = 0;
 
     smpp_ini.ton_src            = _smpp_ini.ton_src;
     _smpp_ini.ton_src           = -1;
@@ -158,19 +179,31 @@ static void _save_file_ini(section_flags sections){
     smpp_ini.command_id  = _smpp_ini.command_id;
     _smpp_ini.command_id = -1;
   }
-  if((SECTION_SIP_DEST & sections) != 0){
-    sip_dest_ini.sip_dest_ip        = _sip_dest_ini.sip_dest_ip;
-    _sip_dest_ini.sip_dest_ip       = NULL;
+  if((SECTION_SIP_REMOTE & sections) != 0){
+    sip_remote_ini.interface_name   = _sip_remote_ini.interface_name;
+    _sip_remote_ini.interface_name  = NULL;
 
-    sip_dest_ini.sip_dest_port      = _sip_dest_ini.sip_dest_port;
-    _sip_dest_ini.sip_dest_port     = NULL;
+    sip_remote_ini.model            = _sip_remote_ini.model;
+    _sip_remote_ini.model           = 0;
+
+    sip_remote_ini.sip_ip           = _sip_remote_ini.sip_ip;
+    _sip_remote_ini.sip_ip          = NULL;
+
+    sip_remote_ini.sip_port         = _sip_remote_ini.sip_port;
+    _sip_remote_ini.sip_port        = 0;
   }
-  if((SECTION_SIP_LOCAL & sections) != 0){
-    sip_local_ini.sip_local_port    = _sip_local_ini.sip_local_port;
-    _sip_local_ini.sip_local_port   = NULL;
+  if((SECTION_SIP_HOST & sections) != 0){
+    sip_host_ini.interface_name   = _sip_host_ini.interface_name;
+    _sip_host_ini.interface_name  = NULL;
 
-    sip_local_ini.sip_local_ip      = _sip_local_ini.sip_local_ip;
-    _sip_local_ini.sip_local_ip     = NULL;
+    sip_host_ini.model            = _sip_host_ini.model;
+    _sip_host_ini.model           = 0;
+
+    sip_host_ini.sip_ip           = _sip_host_ini.sip_ip;
+    _sip_host_ini.sip_ip          = NULL;
+
+    sip_host_ini.sip_port         = _sip_host_ini.sip_port;
+    _sip_host_ini.sip_port        = 0;
   }
   if((SECTION_DBMS & sections) != 0){
     dbms_ini.dbms_name         = _dbms_ini.dbms_name;
@@ -179,17 +212,20 @@ static void _save_file_ini(section_flags sections){
     dbms_ini.db_path           = _dbms_ini.db_path;
     _dbms_ini.db_path          = NULL;
 
-    dbms_ini.db_basename       = _dbms_ini.db_basename;
-    _dbms_ini.db_basename      = NULL;
-
-    dbms_ini.db_dirname        = _dbms_ini.db_dirname;
-    _dbms_ini.db_dirname       = NULL;
-
     dbms_ini.db_encoding       = _dbms_ini.db_encoding;
     _dbms_ini.db_encoding      = NULL;
 
+    dbms_ini.db_synchronous    = _dbms_ini.db_synchronous;
+    _dbms_ini.db_synchronous   = NULL;
+
+    dbms_ini.db_heap_limit     = _dbms_ini.db_heap_limit;
+    _dbms_ini.db_heap_limit    = 0;
+
+    dbms_ini.db_foreign_keys   = _dbms_ini.db_foreign_keys;
+    _dbms_ini.db_foreign_keys  = 0;
+    
     dbms_ini.db_ttl_sms        = _dbms_ini.db_ttl_sms;
-    _dbms_ini.db_ttl_sms       = NULL;
+    _dbms_ini.db_ttl_sms       = 0;
   }
     INFO(LOG_SCREEN,"The config file is loaded");
 
@@ -218,6 +254,11 @@ bool check_file_ini(section_flags sections){
 
   }
   if((SECTION_SMPP & sections) != 0){
+    if(_smpp_ini.interface_name == NULL){
+        ERROR(LOG_SCREEN,"\"interface_name = [interface_name]\" must be defined in the INI file!");
+        b = false;
+    }
+
     if(_smpp_ini.pass_smpp == NULL){
         ERROR(LOG_SCREEN,"\"pass_smpp = [password]\" must be defined in the INI file!");
         b = false;
@@ -228,15 +269,20 @@ bool check_file_ini(section_flags sections){
         b = false;
     }
 
-    if(_smpp_ini.smpp_server_ip == NULL){
-        ERROR(LOG_SCREEN,"\"smpp_server_ip = [xxx.xxx.xxx.xxx]\" must be defined in the INI file!");
+    if(_smpp_ini.smpp_ip == NULL){
+        ERROR(LOG_SCREEN,"\"smpp_ip = [xxx.xxx.xxx.xxx]\" must be defined in the INI file!");
         b = false;
     }
 
-    if(_smpp_ini.smpp_server_port == NULL){
-        ERROR(LOG_SCREEN,"\"smpp_server_port = [xxxxx]\" must be defined in the INI file!");
+    if(_smpp_ini.smpp_port <= 0){
+        ERROR(LOG_SCREEN,"\"smpp_port = [xxxxx]\" must be defined in the INI file!");
         b = false;
     }
+
+/*    if(_smpp_ini.model == MODEL_SERVER || _smpp_ini.model == MODEL_CLIENT){
+        ERROR(LOG_SCREEN,"\"model = [CLIENT(0)/SERVER(1)]\" must be defined in the INI file part SMPP!");
+        b = false;
+    }*/
 
     if(_smpp_ini.ton_src == -1 || _smpp_ini.ton_dst == -1){
         ERROR(LOG_SCREEN,"\"type_of_number = [0-6]\" or both \"type_of_number_dst and"
@@ -266,27 +312,47 @@ bool check_file_ini(section_flags sections){
     //    b = false;
     //}
   }
-  if((SECTION_SIP_DEST & sections) != 0){
-    if(_sip_dest_ini.sip_dest_ip == NULL){
-        ERROR(LOG_SCREEN,"\"sip_dest_ip = [xxx.xxx.xxx.xxx]\" must be defined in the INI file!");
+  if((SECTION_SIP_REMOTE & sections) != 0){
+    if(_sip_remote_ini.interface_name == NULL){
+        ERROR(LOG_SCREEN,"\"interface_name = [interface_name]\" must be defined in the INI file!");
         b = false;
     }
 
-    if(_sip_dest_ini.sip_dest_port == NULL){
-        ERROR(LOG_SCREEN,"\"sip_dest_port = [xxxxx]\" must be defined in the INI file!");
+    if(_sip_remote_ini.sip_ip == NULL){
+        ERROR(LOG_SCREEN,"\"sip_ip = [xxx.xxx.xxx.xxx]\" must be defined in the INI file!");
         b = false;
     }
+
+    if(_sip_remote_ini.sip_port == NULL){
+        ERROR(LOG_SCREEN,"\"sip_port = [xxxxx]\" must be defined in the INI file!");
+        b = false;
+    }
+
+/*    if(_sip_remote_ini.model == NULL){
+        ERROR(LOG_SCREEN,"\"model = [CLIENT(0)/SERVER(1)]\" must be defined in the INI file part SIP_REMOTE!");
+        b = false;
+    }*/
   }
-  if((SECTION_SIP_LOCAL & sections) != 0){
-    if(_sip_local_ini.sip_local_port == NULL){
-        ERROR(LOG_SCREEN,"\"sip_local_port = [xxxxx]\" must be defined in the INI file!");
+  if((SECTION_SIP_HOST & sections) != 0){
+    if(_sip_host_ini.interface_name == NULL){
+        ERROR(LOG_SCREEN,"\"interface_name = [xxx.xxx.xxx.xxx]\" must be defined in the INI file!");
         b = false;
     }
 
-    if(_sip_local_ini.sip_local_ip == NULL){
-        ERROR(LOG_SCREEN,"\"sip_local_ip = [xxx.xxx.xxx.xxx]\" must be defined in the INI file!");
+    if(_sip_host_ini.sip_port == NULL){
+        ERROR(LOG_SCREEN,"\"sip_port = [xxxxx]\" must be defined in the INI file!");
         b = false;
     }
+
+    if(_sip_host_ini.sip_ip == NULL){
+        ERROR(LOG_SCREEN,"\"sip_ip = [xxx.xxx.xxx.xxx]\" must be defined in the INI file!");
+        b = false;
+    }
+
+/*    if(_sip_host_ini.model == NULL){
+        ERROR(LOG_SCREEN,"\"model = [CLIENT(0)/SERVER(1)]\" must be defined in the INI file part SIP_HOST!");
+        b = false;
+    }*/
   }
   if((SECTION_DBMS & sections) != 0){
     if(_dbms_ini.dbms_name == NULL){
@@ -297,14 +363,29 @@ bool check_file_ini(section_flags sections){
             ERROR(LOG_SCREEN,"\"db_path = [path]\" must be defined in the INI file!");
             b = false;
         }
-/*
-        if(_dbms_ini.db_basename == NULL){
-            ERROR(LOG_SCREEN,"\"db_basename = [base_name]\" must be defined in the INI file!");
-	    b = false;
+
+/*        if(_dbms_ini.db_encoding == NULL){
+            ERROR(LOG_SCREEN,"\"db_encoding = [UTF-8]\" must be defined in the INI file!");
+            b = false;
         }
 
-        if(_dbms_ini.db_dirname == NULL){
-            ERROR(LOG_SCREEN,"\"db_dirname = [path]\" must be defined in the INI file!");
+        if(_dbms_ini.db_synchronous == NULL){
+            ERROR(LOG_SCREEN,"\"db_synchronous = [normal|full]\" must be defined in the INI file!");
+            b = false;
+        }
+
+        if(_dbms_ini.heap_limit > 0){
+            ERROR(LOG_SCREEN,"\"db_heap_limit = [size_ko]\" must be defined in the INI file!");
+            b = false;
+        }
+
+        if(_dbms_ini.db_foreign_keys == 0 | ){
+            ERROR(LOG_SCREEN,"\"db_foreign_keys = [bool]\" must be defined in the INI file!");
+            b = false;
+        }
+
+        if(_dbms_ini.db_ttl_sms == NULL){
+            ERROR(LOG_SCREEN,"\"db_ttl_sms = [int8]\" must be defined in the INI file!");
             b = false;
         }
 */
@@ -312,19 +393,8 @@ bool check_file_ini(section_flags sections){
         ERROR(LOG_SCREEN,"%s is not supported!",_dbms_ini.dbms_name);
         b = false;
     }
-/*
-    if(_dbms_ini.db_encoding == NULL){
-        ERROR(LOG_SCREEN,"\"db_encoding = [UTF-8]\" must be defined in the INI file!");
-	b = false;
-    }
-
-    if(_dbms_ini.db_ttl_sms == NULL){
-        ERROR(LOG_SCREEN,"\"db_ttl_sms = [int]\" must be defined in the INI file!");
-	b = false;
-    }
-*/
   }
-    return b;
+  return b;
 }
 
 /**
@@ -366,76 +436,98 @@ bool load_file_ini(uint8_t *conffile, section_flags sections){
     }
 
     if((SECTION_SMPP & sections) != 0){
-      uint8_t smpp_server_ip_ini[100]   = "127.0.0.1";
-      uint8_t smpp_server_port_ini[100] = "2775";
-      uint8_t user_smpp_ini[100]        = "user";
-      uint8_t pass_smpp_ini[100]        = "pass";
-      int8_t  npi_ini                   = 1;//src and dst
-      int8_t  ton_ini                   = 1;//src and dst
-      uint8_t system_type_ini[30]       = "WWW";
-      uint8_t service_type_ini[30]      = "";
-      int8_t  command_id_ini            = 1;
+      uint8_t  smpp_interface_name_ini[50] = "SMPP_01";
+      uint8_t  smpp_model_ini              = 0;
+      uint8_t  smpp_ip_ini[100]            = "127.0.0.1";
+      uint32_t smpp_port_ini               = 2775;
+      uint8_t  smpp_nb_client_ini          = 0;
+      uint8_t  smpp_user_ini[100]          = "user";
+      uint8_t  smpp_pass_ini[100]          = "pass";
+      int8_t   npi_ini                     = 1;//src and dst
+      int8_t   ton_ini                     = 1;//src and dst
+      uint8_t  system_type_ini[30]         = "WWW";
+      uint8_t  service_type_ini[30]        = "";
+      int8_t   command_id_ini              = 1;
 
+
+      if(_smpp_ini.interface_name)
+          free(_smpp_ini.interface_name);
+      _smpp_ini.interface_name   = NULL;
+      _smpp_ini.model     = 0;
+      if(_smpp_ini.smpp_ip)
+          free(_smpp_ini.smpp_ip);
+      _smpp_ini.smpp_ip   = NULL;
+      _smpp_ini.smpp_port = NULL;
+      _smpp_ini.nb_client = 0;
       if(_smpp_ini.pass_smpp)
           free(_smpp_ini.pass_smpp);
       _smpp_ini.pass_smpp        = NULL;
-
       if(_smpp_ini.user_smpp)
           free(_smpp_ini.user_smpp);
       _smpp_ini.user_smpp        = NULL;
-
-      if(_smpp_ini.smpp_server_ip)
-          free(_smpp_ini.smpp_server_ip);
-      _smpp_ini.smpp_server_ip   = NULL;
-
-      if(_smpp_ini.smpp_server_port)
-          free(_smpp_ini.smpp_server_port);
-      _smpp_ini.smpp_server_port = NULL;
-
-      _smpp_ini.npi_src = -1;
-      _smpp_ini.ton_src = -1;
-      _smpp_ini.npi_dst = -1;
-      _smpp_ini.ton_dst = -1;
-
+      _smpp_ini.npi_src   = -1;
+      _smpp_ini.ton_src   = -1;
+      _smpp_ini.npi_dst   = -1;
+      _smpp_ini.ton_dst   = -1;
       if(_smpp_ini.system_type)
           free(_smpp_ini.system_type);
       _smpp_ini.system_type = NULL;
-
       if(_smpp_ini.service_type)
           free(_smpp_ini.service_type);
       _smpp_ini.service_type = NULL;
-      
       _smpp_ini.command_id = -1;
 
-      if(_smpp_ini.smpp_server_ip == NULL) {
-          ini_gets("SMPP", "smpp_server_ip", "none", smpp_server_ip_ini, sizearray(smpp_server_ip_ini), conffile);
-          if(strcmp(smpp_server_ip_ini, "none") != 0) {
-              _strcpy(&(_smpp_ini.smpp_server_ip),smpp_server_ip_ini);
+
+      if(_smpp_ini.interface_name == NULL) {
+          ini_gets("SMPP", "interface_name", "none", smpp_interface_name_ini, sizearray(smpp_interface_name_ini), conffile);
+          if(strcmp(smpp_interface_name_ini, "none") != 0) {
+              _strcpy(&(_smpp_ini.interface_name),smpp_interface_name_ini);
+          }
+      }
+      
+      if(_smpp_ini.model == 0) {
+          smpp_model_ini = ini_getl("SMPP", "model", 0, conffile);
+          if(smpp_model_ini == 0 || smpp_model_ini == 1) {
+              _smpp_ini.model = smpp_model_ini;
           }
       }
 
-      if(_smpp_ini.smpp_server_port == NULL) {
-          ini_gets("SMPP", "smpp_server_port", "none", smpp_server_port_ini, sizearray(smpp_server_port_ini), conffile);
-          if(strcmp(smpp_server_port_ini, "none") != 0) {
-              _strcpy(&(_smpp_ini.smpp_server_port),smpp_server_port_ini);
+      if(_smpp_ini.smpp_ip == NULL) {
+          ini_gets("SMPP", "smpp_ip", "none", smpp_ip_ini, sizearray(smpp_ip_ini), conffile);
+          if(strcmp(smpp_ip_ini, "none") != 0) {
+              _strcpy(&(_smpp_ini.smpp_ip), smpp_ip_ini);
           }
       }
 
-      if(_smpp_ini.user_smpp == NULL) {
-          ini_gets("SMPP", "system_id_smpp", "none", user_smpp_ini, sizearray(user_smpp_ini), conffile);
-          if(strcmp(user_smpp_ini, "none") != 0) {
-              _strcpy(&(_smpp_ini.user_smpp),user_smpp_ini);
+      if(_smpp_ini.smpp_port == 0) {
+          smpp_port_ini = ini_getl("SMPP", "smpp_port", 0, conffile);
+          if(smpp_port_ini > 0) {
+              _smpp_ini.smpp_port = smpp_port_ini;
+          }
+      }
+
+      if(_smpp_ini.nb_client == 0) {
+          smpp_nb_client_ini = ini_getl("SMPP", "nb_client", 1, conffile);
+          if(smpp_nb_client_ini > 0) {
+              _smpp_ini.nb_client = smpp_nb_client_ini;
+          }
+      }
+
+      if(_smpp_ini.user_smpp == NULL){
+          ini_gets("SMPP", "system_id_smpp", "none", smpp_user_ini, sizearray(smpp_user_ini), conffile);
+          if(strcmp(smpp_user_ini, "none") != 0) {
+              _strcpy(&(_smpp_ini.user_smpp), smpp_user_ini);
           }
       }
 
       if(_smpp_ini.pass_smpp == NULL) {
-          ini_gets("SMPP", "pass_smpp", "none", pass_smpp_ini, sizearray(pass_smpp_ini), conffile);
-          if(strcmp(pass_smpp_ini, "none") != 0) {
-              _strcpy(&(_smpp_ini.pass_smpp),pass_smpp_ini);
+          ini_gets("SMPP", "pass_smpp", "none", smpp_pass_ini, sizearray(smpp_pass_ini), conffile);
+          if(strcmp(smpp_pass_ini, "none") != 0) {
+              _strcpy(&(_smpp_ini.pass_smpp), smpp_pass_ini);
           }
       }
 
-      if(_smpp_ini.npi_src == -1 || _smpp_ini.npi_dst == -1) {
+      if(_smpp_ini.npi_src == -1 || _smpp_ini.npi_dst == -1){
           npi_ini = ini_getl("SMPP", "numeric_plan_indicator", -1, conffile);
           if(npi_ini != -1) {
               _smpp_ini.npi_src = npi_ini;
@@ -499,97 +591,128 @@ bool load_file_ini(uint8_t *conffile, section_flags sections){
       }
     }
 
-    if((SECTION_SIP_DEST & sections) != 0){
-      uint8_t sip_dest_port_ini[20]    ="127.0.0.1";
-      uint8_t sip_dest_ip_ini[20]      ="5060";
+    if((SECTION_SIP_REMOTE & sections) != 0){
+      uint8_t  sip_interface_name_ini[50] = "SIP_REMOTE";
+      uint8_t  sip_model_ini       = 0;
+      uint8_t  sip_ip_ini[20]      = "127.0.0.1";
+      uint16_t sip_port_ini        = 5060;
 
-      if(_sip_dest_ini.sip_dest_ip)
-          free(_sip_dest_ini.sip_dest_ip);
-      _sip_dest_ini.sip_dest_ip      = NULL;
+      if(_sip_remote_ini.interface_name)
+          free(_sip_remote_ini.interface_name);
+      _sip_remote_ini.interface_name = NULL;
+      _sip_remote_ini.model    = 0;
+      if(_sip_remote_ini.sip_ip)
+          free(_sip_remote_ini.sip_ip);
+      _sip_remote_ini.sip_ip      = NULL;
+      _sip_remote_ini.sip_port    = 0;
 
-      if(_sip_dest_ini.sip_dest_port)
-          free(_sip_dest_ini.sip_dest_port);
-      _sip_dest_ini.sip_dest_port    = NULL;
 
-      if(_sip_dest_ini.sip_dest_ip == NULL) {
-          ini_gets("SIP_DEST", "sip_dest_ip", "none", sip_dest_ip_ini, sizearray(sip_dest_ip_ini), conffile);
-          if(strcmp(sip_dest_ip_ini, "none") != 0){
-              _strcpy(&(_sip_dest_ini.sip_dest_ip),sip_dest_ip_ini);
+      if(_sip_remote_ini.interface_name == NULL) {
+          ini_gets("SIP_REMOTE", "interface_name", "none", sip_interface_name_ini, sizearray(sip_interface_name_ini), conffile);
+          if(strcmp(sip_interface_name_ini, "none") != 0) {
+              _strcpy(&(_sip_remote_ini.interface_name), sip_interface_name_ini);
+          }
+      }
+      
+      if(_sip_remote_ini.model == 0) {
+          sip_model_ini = ini_getl("SIP_REMOTE", "model", 0, conffile);
+          if(sip_model_ini == 0 || sip_model_ini == 1) {
+              _sip_remote_ini.model = sip_model_ini;
           }
       }
 
-      if(_sip_dest_ini.sip_dest_port == NULL) {
-          ini_gets("SIP_DEST", "sip_dest_port", "none", sip_dest_port_ini, sizearray(sip_dest_port_ini), conffile);
-          if(strcmp(sip_dest_port_ini, "none") != 0) {
-              _strcpy(&(_sip_dest_ini.sip_dest_port),sip_dest_port_ini);
+      if(_sip_remote_ini.sip_ip == NULL){
+          ini_gets("SIP_REMOTE", "sip_ip", "none", sip_ip_ini, sizearray(sip_ip_ini), conffile);
+          if(strcmp(sip_ip_ini, "none") != 0){
+              _strcpy(&(_sip_remote_ini.sip_ip), sip_ip_ini);
           }
       }
+
+      if(_sip_remote_ini.sip_port == 0) {
+          sip_port_ini = ini_getl("SIP_REMOTE", "sip_port", 0, conffile);
+          if(sip_port_ini > 0) {
+              _sip_remote_ini.sip_port = sip_port_ini;
+          }
+      }
+
     }
 
-    if((SECTION_SIP_LOCAL & sections) != 0){
-      uint8_t sip_local_port_ini[20]   ="127.0.0.1";
-      uint8_t sip_local_ip_ini[20]     ="5080";
+    if((SECTION_SIP_HOST & sections) != 0){
+      uint8_t  sip_interface_name_ini[50] = "SIP_REMOTE";
+      uint8_t  sip_model_ini       = 0;
+      uint8_t  sip_ip_ini[20]      = "127.0.0.1";
+      uint16_t sip_port_ini        = 5060;
 
-      if(_sip_local_ini.sip_local_port)
-          free(_sip_local_ini.sip_local_port);
-      _sip_local_ini.sip_local_port   = NULL;
+      if(_sip_host_ini.interface_name)
+          free(_sip_host_ini.interface_name);
+      _sip_host_ini.interface_name = NULL;
+      _sip_host_ini.model    = 0;
+      if(_sip_host_ini.sip_ip)
+          free(_sip_host_ini.sip_ip);
+      _sip_host_ini.sip_ip      = NULL;
+      _sip_host_ini.sip_port    = 0;
 
-      if(_sip_local_ini.sip_local_ip)
-          free(_sip_local_ini.sip_local_ip);
-      _sip_local_ini.sip_local_ip     = NULL;
-    
-      if(_sip_local_ini.sip_local_ip == NULL) {
-          ini_gets("SIP_LOCAL", "sip_local_ip", "none", sip_local_ip_ini, sizearray(sip_local_ip_ini), conffile);
-          if(strcmp(sip_local_ip_ini, "none") != 0){
-              _strcpy(&(_sip_local_ini.sip_local_ip),sip_local_ip_ini);
+
+      if(_sip_host_ini.interface_name == NULL) {
+          ini_gets("SIP_HOST", "interface_name", "none", sip_interface_name_ini, sizearray(sip_interface_name_ini), conffile);
+          if(strcmp(sip_interface_name_ini, "none") != 0) {
+              _strcpy(&(_sip_host_ini.interface_name), sip_interface_name_ini);
+          }
+      }
+      
+      if(_sip_host_ini.model == 0) {
+          sip_model_ini = ini_getl("SIP_HOST", "model", 0, conffile);
+          if(sip_model_ini == 0 || sip_model_ini == 1) {
+              _sip_host_ini.model = sip_model_ini;
           }
       }
 
-      if(_sip_local_ini.sip_local_port == NULL) {
-          ini_gets("SIP_LOCAL", "sip_local_port", "none", sip_local_port_ini, sizearray(sip_local_port_ini), conffile);
-          if(strcmp(sip_local_port_ini, "none") != 0) {
-              _strcpy(&(_sip_local_ini.sip_local_port),sip_local_port_ini);
+      if(_sip_host_ini.sip_ip == NULL){
+          ini_gets("SIP_HOST", "sip_ip", "none", sip_ip_ini, sizearray(sip_ip_ini), conffile);
+          if(strcmp(sip_ip_ini, "none") != 0){
+              _strcpy(&(_sip_host_ini.sip_ip), sip_ip_ini);
+          }
+      }
+
+      if(_sip_host_ini.sip_port == 0) {
+          sip_port_ini = ini_getl("SIP_HOST", "sip_port", 0, conffile);
+          if(sip_port_ini > 0) {
+              _sip_host_ini.sip_port = sip_port_ini;
           }
       }
     }
 
     if((SECTION_DBMS & sections) != 0){
-      uint8_t dbms_name_ini[20]        ="sqlite3";
-      uint8_t db_path_ini[200]         ="/etc/sip2smpp/sip2smpp.sqlite3";
-      uint8_t db_basename_ini[50]      ="sip2smpp";
-      uint8_t db_dirname_ini[200]      ="/var/sqlite3/sip2smpp";
-      uint8_t db_encoding_ini[10]      ="UTF-8";
-      uint8_t db_ttl_sms_ini[10]	     ="0";
+      uint8_t  dbms_name_ini[20]        = "sqlite3";
+      uint8_t  db_path_ini[200]         = "/etc/sip2smpp/sip2smpp.sqlite3";
+      uint8_t  db_encoding_ini[10]      = "UTF-8";
+      uint8_t  db_synchronous_ini[10]   = "normal";
+      uint32_t db_heap_limit_ini        = 8096;
+      uint8_t  db_foreign_keys_ini      = 0;
+      uint8_t  db_ttl_sms_ini	          = 0;
 
       if(_dbms_ini.dbms_name)
           free(_dbms_ini.dbms_name);
       _dbms_ini.dbms_name        = NULL;
-
       if(_dbms_ini.db_path)
           free(_dbms_ini.db_path);
-      _dbms_ini.db_path      = NULL;
-
-      if(_dbms_ini.db_basename)
-          free(_dbms_ini.db_basename);
-      _dbms_ini.db_basename      = NULL;
-
-      if(_dbms_ini.db_dirname)
-          free(_dbms_ini.db_dirname);
-      _dbms_ini.db_dirname       = NULL;
-
+      _dbms_ini.db_path          = NULL;
       if(_dbms_ini.db_encoding)
           free(_dbms_ini.db_encoding);
       _dbms_ini.db_encoding      = NULL;
-
-      if(_dbms_ini.db_ttl_sms)
-          free(_dbms_ini.db_ttl_sms);
+      if(_dbms_ini.db_synchronous)
+          free(_dbms_ini.db_synchronous);
+      _dbms_ini.db_synchronous   = NULL;
+      _dbms_ini.db_heap_limit    = 0;
+      _dbms_ini.db_encoding      = 0;
       _dbms_ini.db_ttl_sms       = NULL;
-    
+
+
       if(_dbms_ini.dbms_name == NULL){
           ini_gets("DBMS", "dbms_name", "none", dbms_name_ini, sizearray(dbms_name_ini), conffile);
-	  if(strcmp(dbms_name_ini, "none") != 0) {
+          if(strcmp(dbms_name_ini, "none") != 0) {
               _strcpy(&(_dbms_ini.dbms_name),dbms_name_ini);
-	  }
+          }
       }
 
       if(_dbms_ini.db_path == NULL){
@@ -599,34 +722,41 @@ bool load_file_ini(uint8_t *conffile, section_flags sections){
           }
       }
 
-      if(_dbms_ini.db_basename == NULL){
-          ini_gets("DBMS", "db_basename", "none", db_basename_ini, sizearray(db_basename_ini), conffile);
-          if(strcmp(db_basename_ini, "none") != 0) {
-              _strcpy(&(_dbms_ini.db_basename),db_basename_ini);
-          }
-      }
-
-      if(_dbms_ini.db_dirname == NULL){
-          ini_gets("DBMS", "db_dirname", "none", db_dirname_ini, sizearray(db_dirname_ini), conffile);
-          if(strcmp(db_dirname_ini, "none") != 0) {
-	      _strcpy(&(_dbms_ini.db_dirname),db_dirname_ini);
-          }
-      }
-
       if(_dbms_ini.db_encoding == NULL){
-          ini_gets("DBMS", "db_encoding", "UTF-8", db_encoding_ini, sizearray(db_encoding_ini), conffile);
+          ini_gets("DBMS", "db_encoding", "none", db_encoding_ini, sizearray(db_encoding_ini), conffile);
           if(strcmp(db_encoding_ini, "none") != 0) {
-	      _strcpy(&(_dbms_ini.db_encoding),db_encoding_ini);
+              _strcpy(&(_dbms_ini.db_encoding),db_encoding_ini);
           }
       }
 
-      if(_dbms_ini.db_ttl_sms == NULL){
-          ini_gets("DBMS", "db_ttl_sms", "0", db_ttl_sms_ini, sizearray(db_ttl_sms_ini), conffile);
-          if(strcmp(db_ttl_sms_ini, "none") != 0) {
-	      _strcpy(&(_dbms_ini.db_ttl_sms),db_ttl_sms_ini);
+      if(_dbms_ini.db_synchronous == NULL){
+          ini_gets("DBMS", "db_synchronous", "none", db_synchronous_ini, sizearray(db_synchronous_ini), conffile);
+          if(strcmp(db_synchronous_ini, "none") != 0) {
+	      _strcpy(&(_dbms_ini.db_synchronous),db_synchronous_ini);
           }
       }
-    }
+
+      if(_dbms_ini.db_heap_limit == NULL) {
+          db_heap_limit_ini = ini_getl("DBMS", "db_heap_limit", 0, conffile);
+          if(db_heap_limit_ini > 0) {
+              _dbms_ini.db_heap_limit = db_heap_limit_ini;
+          }
+      }
+
+      if(_dbms_ini.db_foreign_keys == NULL) {
+          db_foreign_keys_ini = ini_getl("DBMS", "db_foreign_keys", 0, conffile);
+          if(db_foreign_keys_ini > 0) {
+              _dbms_ini.db_foreign_keys = db_foreign_keys_ini;
+          }
+      }
+
+      if(_dbms_ini.db_ttl_sms == NULL) {
+          db_ttl_sms_ini = ini_getl("DBMS", "db_ttl_sms", 0, conffile);
+          if(db_ttl_sms_ini > 0) {
+              _dbms_ini.db_ttl_sms = db_ttl_sms_ini;
+          }
+      }
+  }
 
     if((b = check_file_ini(sections)) == true){
        _save_file_ini(sections);

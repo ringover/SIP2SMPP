@@ -28,11 +28,6 @@ extern "C"{
 #define END_COLOR  "\033[0m"
 //End Color
 
-/*typedef enum _boolean{
-    FALSE = 0,
-    TRUE  = 1
-}boolean;*/
-
 #endif /*TYPE_PROJET_H*/
 
 #ifdef __cplusplus

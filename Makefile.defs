@@ -6,8 +6,9 @@ CXX = g++
 #Link eDitor
 LD = $(CXX)
 
-LDFLAGS = -Wall -pedantic -g
-ARFLAGS = -lsmpp34 -pthread -ldbi  -lrt 
+#LDFLAGS = -Wall -pedantic -g -O3
+LDFLAGS = -Wall -pedantic -g 
+ARFLAGS = -lsmpp34 -pthread -lzdb  -lrt -losip2 
 #ARFLAGS =  -pthread -ldbi  -lrt 
 CFLAGS = $(LDFLAGS)
 #CXXFLASG = $(LDFLAGS) -std=c++11

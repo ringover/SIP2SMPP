@@ -8,6 +8,7 @@ extern "C"{
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <time.h>
 #include "log/log.h"

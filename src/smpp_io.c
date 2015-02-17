@@ -5,42 +5,22 @@
 *  
 */
 #include "smpp_io.h"
-
-static uint8_t type_bind_smpp_str[4][25] = {
-        "SMPP_BIND_NONE",
-        "SMPP_BIND_RECEIVER",
-        "SMPP_BIND_TRANSMITTER",
-        "SMPP_BIND_TRANSCEIVER"
-};
-
-uint8_t* type_bind_smpp_enum_to_str(type_bind_smpp_enum num){
-    return (uint8_t*) type_bind_smpp_str[num];
-}
-
-/**
-*  \brief This function return the enum number STR SMPP BIND
-*
-*  \param str_in   This parameter is the SMPP BIND mode
-*/
-type_bind_smpp_enum type_bind_smpp_str_to_enum(uint8_t *str_in){
-        type_bind_smpp_enum i = SMPP_BIND_RECEIVER;
-        while(i<=SMPP_BIND_TRANSCEIVER && strcmp((char*)type_bind_smpp_str[i],(char*)str_in) != 0) i++;
-        return (i>SMPP_BIND_TRANSCEIVER ? SMPP_BIND_NONE : i);
-}
-
-smpp_socket* new_smpp_socket(uint8_t *ip_addr, uint16_t port, uint8_t *user, uint8_t *passwd, type_bind_smpp_enum type_bind, uint8_t *system_type, int8_t ton_src, int8_t npi_src, int8_t ton_dst, int8_t npi_dst){
+smpp_socket* new_smpp_socket(unsigned char *interface_name, unsigned char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, int bind, unsigned char *system_type, int ton_src, int npi_src, int ton_dst, int npi_dst){
     smpp_socket *p_smpp_socket = (smpp_socket*)calloc(1,sizeof(smpp_socket));
+
+    p_smpp_socket->interface_name = (uint8_t*)calloc(strlen((char*)interface_name)+1,sizeof(uint8_t));
+    strcpy((char*)p_smpp_socket->interface_name,(char*)interface_name);
 
     p_smpp_socket->status = SMPP_DISCONNECT;
     
-    p_smpp_socket->type_bind = type_bind;
+    p_smpp_socket->bind = bind;
 
-    p_smpp_socket->ip_addr = (uint8_t*)calloc(strlen((char*)ip_addr)+1,sizeof(uint8_t));
-    strcpy((char*)p_smpp_socket->ip_addr,(char*)ip_addr);
+    p_smpp_socket->ip_remote = (uint8_t*)calloc(strlen((char*)ip_remote)+1,sizeof(uint8_t));
+    strcpy((char*)p_smpp_socket->ip_remote,(char*)ip_remote);
 
-    p_smpp_socket->port = port;
+    p_smpp_socket->port_remote = port_remote;
 
-    p_smpp_socket->sock = 0;
+    p_smpp_socket->sock = (socket_t*)calloc(1,sizeof(socket_t));
 
     //user = 16 chars max
     p_smpp_socket->user = (uint8_t*)calloc(strlen((char*)user)+1,sizeof(uint8_t));
@@ -65,10 +45,10 @@ smpp_socket* new_smpp_socket(uint8_t *ip_addr, uint16_t port, uint8_t *user, uin
     return (smpp_socket*) p_smpp_socket;
 }
 
-void free_smpp_socket(smpp_socket **p_smpp_socket){
+void smpp_socket_free(smpp_socket **p_smpp_socket){
     if(p_smpp_socket && *p_smpp_socket){
-        if((*p_smpp_socket)->ip_addr){
-            free((*p_smpp_socket)->ip_addr);
+        if((*p_smpp_socket)->ip_remote){
+            free((*p_smpp_socket)->ip_remote);
         }
         if((*p_smpp_socket)->user){
             free((*p_smpp_socket)->user);
@@ -79,10 +59,37 @@ void free_smpp_socket(smpp_socket **p_smpp_socket){
         if((*p_smpp_socket)->system_type){
             free((*p_smpp_socket)->system_type);
         }
+//        socket_t_free(&(*p_smpp_socket)->sock);
+        if((*p_smpp_socket)->sock){
+            free((*p_smpp_socket)->sock);
+        }
         free(*p_smpp_socket);
         *p_smpp_socket = NULL;
     }
     return;
+}
+
+/**
+ * Used for MAP ans LIST
+ */
+void free_smpp_socket(void **p_p_data){
+    //smpp_socket_free((smpp_socket**)p_p_data);
+    return;
+}
+
+void* copy_smpp_socket(const void *p_data){
+    /*Not used*/
+    return NULL;
+}
+
+int compare_smpp_socket(const void *p_data1, const void *p_data2){
+    int res = 0;
+    smpp_socket *p_smpp_sock1 = (smpp_socket*)p_data1;
+    smpp_socket *p_smpp_sock2 = (smpp_socket*)p_data2;
+    if(strcmp((char*)p_smpp_sock1->interface_name, (char*)p_smpp_sock2->interface_name) != 0){
+        return -1;
+    }
+    return (int) res;
 }
 
 /**
@@ -91,43 +98,42 @@ void free_smpp_socket(smpp_socket **p_smpp_socket){
 *  \param  p_smpp_socket     It is a structure used to connect a SMPP session
 *
 */
-error_smpp smpp_start_connection(smpp_socket *p_smpp_socket){
-    if(p_smpp_socket == NULL){
-        ERROR(LOG_SCREEN | LOG_FILE,"SMPP socket is null")
-        return (error_smpp) SMPP_ERROR_GENERAL;
-    }
-    if(p_smpp_socket->type_bind <= SMPP_BIND_NONE || p_smpp_socket->type_bind > SMPP_BIND_TRANSCEIVER){
-        ERROR(LOG_SCREEN | LOG_FILE,"smpp bind")
-        return (error_smpp) SMPP_ERROR_BIND;
-    }
-    if(p_smpp_socket->status == SMPP_DISCONNECT){
-        if(do_tcp_connect(&(p_smpp_socket->sock),(uint8_t*)p_smpp_socket->ip_addr,(int16_t)p_smpp_socket->port) == -1){
-            ERROR(LOG_SCREEN | LOG_FILE,"smpp connection")
-            return (error_smpp) SMPP_ERROR_CONNECT;
+int smpp_start_connection(smpp_socket *p_smpp_socket){
+    int ret = 0;
+    if(p_smpp_socket != NULL && (p_smpp_socket->bind == BIND_TRANSCEIVER || p_smpp_socket->bind == BIND_TRANSMITTER || p_smpp_socket->bind == BIND_RECEIVER) &&
+       p_smpp_socket->status == SMPP_DISCONNECT ){
+        if(tcp_socket_client(p_smpp_socket->sock, p_smpp_socket->ip_remote, p_smpp_socket->port_remote) == -1){
+            return (int) -1;
         }
-        switch(p_smpp_socket->type_bind){
-        case SMPP_BIND_RECEIVER :
-            if(do_smpp_connect_receiver(p_smpp_socket->sock, p_smpp_socket->user, p_smpp_socket->passwd, p_smpp_socket->system_type,p_smpp_socket->ton_src,p_smpp_socket->npi_src)){
-                ERROR(LOG_SCREEN | LOG_FILE,"\033[0;31;40mError : smpp receiver connect.\033[0m")
-            }
-            break;
-        case SMPP_BIND_TRANSMITTER :
-            if(do_smpp_connect_transmitter(p_smpp_socket->sock, p_smpp_socket->user, p_smpp_socket->passwd, p_smpp_socket->system_type,p_smpp_socket->ton_src,p_smpp_socket->npi_src)){
-                ERROR(LOG_SCREEN | LOG_FILE,"\033[0;31;40mError : smpp transmitter connect.\033[0m")
-            }
-            break;
-        case SMPP_BIND_TRANSCEIVER :
-            if(do_smpp_connect_transceiver(p_smpp_socket->sock, p_smpp_socket->user, p_smpp_socket->passwd, p_smpp_socket->system_type,p_smpp_socket->ton_src,p_smpp_socket->npi_src)){
-                ERROR(LOG_SCREEN | LOG_FILE,"\033[0;31;40mError : smpp transceiver connect.\033[0m")
-            }
-            break;
+        switch(p_smpp_socket->bind){
+          case BIND_RECEIVER :
+              if((ret = do_smpp_bind_receiver(p_smpp_socket->sock, p_smpp_socket->user, p_smpp_socket->passwd, p_smpp_socket->system_type,p_smpp_socket->ton_src,p_smpp_socket->npi_src)) == -1){
+                  ERROR(LOG_SCREEN | LOG_FILE, RED"Error : smpp receiver connect."END_COLOR)
+              }
+              break;
+          case BIND_TRANSMITTER :
+              if((ret = do_smpp_bind_transmitter(p_smpp_socket->sock, p_smpp_socket->user, p_smpp_socket->passwd, p_smpp_socket->system_type,p_smpp_socket->ton_src,p_smpp_socket->npi_src)) == -1){
+                  ERROR(LOG_SCREEN | LOG_FILE, RED"Error : smpp transmitter connect."END_COLOR)
+              }
+              break;
+          case BIND_TRANSCEIVER :
+              if((ret = do_smpp_bind_transceiver(p_smpp_socket->sock, p_smpp_socket->user, p_smpp_socket->passwd, p_smpp_socket->system_type,p_smpp_socket->ton_src,p_smpp_socket->npi_src)) == -1){
+                  ERROR(LOG_SCREEN | LOG_FILE, RED"Error : smpp transceiver connect."END_COLOR)
+              }
+              break;
+          default:
+              ret = -1;
+              break;
+        }
+        if(ret == -1){
+            tcp_close(p_smpp_socket->sock);
+            return (int) -1;
         }
         p_smpp_socket->status = SMPP_CONNECT;
-        INFO(LOG_SCREEN,"\033[0;33;40mSMPP loaded to %s mode\033[0m",type_bind_smpp_str[p_smpp_socket->type_bind])
-        return (error_smpp) SMPP_ERROR_NO;
+        ERROR(LOG_SCREEN | LOG_FILE, GREEN"The connection to %s:%d SMPP Socket is ready"END_COLOR, p_smpp_socket->ip_remote, p_smpp_socket->port_remote)
+        return (int) 0;
     }
-    ERROR(LOG_SCREEN | LOG_FILE,"smpp ready connect")
-    return (error_smpp) SMPP_ALREADY_CONNECT;
+    return (int) -1;
 }
 
 /**
@@ -136,14 +142,15 @@ error_smpp smpp_start_connection(smpp_socket *p_smpp_socket){
 *  \param p_smpp_socket   This parameter is the SMPP socket structure
 *
 */
-error_smpp smpp_end_connection(smpp_socket *p_smpp_socket){
+int smpp_end_connection(smpp_socket *p_smpp_socket){
     if(p_smpp_socket && p_smpp_socket->status == SMPP_CONNECT){
-        do_udp_close(p_smpp_socket->sock);
+        do_smpp_unbind(p_smpp_socket->sock);
+        udp_close(p_smpp_socket->sock);
         p_smpp_socket->status = SMPP_DISCONNECT;
-        return (error_smpp) SMPP_ERROR_NO;
+        return (int) 0;
     }
     INFO(LOG_SCREEN | LOG_FILE,"smpp already disconnect")
-    return (error_smpp) SMPP_IS_NOT_CONNECT;
+    return (int) -1;
 }
 
 /**
@@ -152,40 +159,17 @@ error_smpp smpp_end_connection(smpp_socket *p_smpp_socket){
 *  \param p_smpp_socket   This parameter is the SMPP socket structure
 *
 */
-error_smpp smpp_restart_connection(smpp_socket *p_smpp_socket){
-    smpp_end_connection(p_smpp_socket);
-    return (error_smpp) smpp_start_connection(p_smpp_socket);
+int smpp_restart_connection(smpp_socket *p_smpp_socket){
+    smpp_end_connection(p_smpp_socket->sock);
+    return (int) smpp_start_connection(p_smpp_socket->sock);
 }
 
-error_smpp smpp_send_message(smpp_socket *p_smpp_socket, uint8_t *from_msisdn, uint8_t *to_msisdn, uint8_t *msg){
-//    do_smpp_send_message(p_smpp_socket->sock,from_msisdn,to_msisdn,msg,p_smpp_socket->ton_src,p_smpp_socket->npi_src,p_smpp_socket->ton_dst,p_smpp_socket->npi_dst);
-
-    if(p_smpp_socket &&
-       (p_smpp_socket->type_bind == SMPP_BIND_TRANSMITTER || p_smpp_socket->type_bind == SMPP_BIND_TRANSCEIVER) &&
-       from_msisdn && strlen((char*)from_msisdn) > 0 &&
-       to_msisdn && strlen((char*)to_msisdn) > 0 &&
-       msg && strlen((char*)msg) > 0 &&
-       do_smpp_send_message(p_smpp_socket->sock,from_msisdn,to_msisdn,msg,p_smpp_socket->ton_src,p_smpp_socket->npi_src,p_smpp_socket->ton_dst,p_smpp_socket->npi_dst) == 0
-       ){
-            return (error_smpp) SMPP_ERROR_NO;
+int smpp_receive_sms(smpp_socket *p_smpp_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **msg){
+    if(p_smpp_socket && (p_smpp_socket->bind == BIND_RECEIVER || p_smpp_socket->bind == BIND_TRANSCEIVER)){
+        return (int) do_smpp_receive_sms(p_smpp_socket->sock,from_msisdn,to_msisdn,msg);
     }
-    ERROR(LOG_SCREEN | LOG_FILE, "smpp message don't send")
-    return (error_smpp) SMPP_ERROR_SEND;
-}
-
-error_smpp smpp_receive_message(smpp_socket *p_smpp_socket, uint8_t **from_msisdn, uint8_t **to_msisdn, uint8_t **msg){
-    if(p_smpp_socket &&
-       (p_smpp_socket->type_bind == SMPP_BIND_RECEIVER || p_smpp_socket->type_bind == SMPP_BIND_TRANSCEIVER) &&
-       from_msisdn && *from_msisdn == NULL &&
-       to_msisdn && *to_msisdn == NULL &&
-       msg && *msg == NULL){
-            if(do_smpp_receive_message(p_smpp_socket->sock,from_msisdn,to_msisdn,msg) == 0){
-                return (error_smpp) SMPP_ERROR_NO;
-            }
-            return (error_smpp) SMPP_NO_MESSAGE;
-    }
-    ERROR(LOG_SCREEN | LOG_FILE, "smpp message don't receive")
-    return (error_smpp) SMPP_ERROR_RECEIVE;
+    ERROR(LOG_SCREEN | LOG_FILE, "SMPP Message don't receive")
+    return (int) -1;
 }
 
 /**
@@ -195,14 +179,29 @@ error_smpp smpp_receive_message(smpp_socket *p_smpp_socket, uint8_t **from_msisd
 *  \param to_msisdn    This parameter is the callee
 *  \param msg          This parameter is the message
 */
-void display_smpp_message(uint8_t *from_msisdn, uint8_t *to_msisdn, uint8_t *msg){
-    INFO(LOG_SCREEN, "------------------------------------------------------"
-                      "  _______  "
-                      " |\\_____/| source addr: %s"
-                      " |_______| dest addr: %s"
-                      " Short Message :\n%s"
-                      "------------------------------------------------------"
-                      , (char*)from_msisdn, (char*)to_msisdn, (char*)msg)
+void display_sms(unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg){
+    if(from_msisdn && to_msisdn && msg){
+        INFO(LOG_SCREEN, "------------------------------------------------------"
+                         "  _______  "
+                         " |\\_____/| from msisdn: %s"
+                         " |_______| to msisdn: %s"
+                         " Short Message :\n%s"
+                         "------------------------------------------------------"
+                         , (char*)from_msisdn, (char*)to_msisdn, (char*)msg)
+    }
     return;
 }
 
+
+int send_sms_to_smpp(unsigned char* interface_name, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg){
+    smpp_socket *p_sock = map_get(map_str_smpp, interface_name);
+    if(p_sock->bind == BIND_TRANSMITTER || p_sock->bind == BIND_TRANSCEIVER){
+        return (int) do_smpp_send_sms(p_sock->sock,from_msisdn,to_msisdn,msg,p_sock->ton_src,p_sock->npi_src,p_sock->ton_dst,p_sock->npi_dst);
+    }
+    ERROR(LOG_SCREEN | LOG_FILE, "SMPP Message don't send") 
+    return (int) -1;
+}
+
+int send_sms_to_smpp_interface(unsigned char* interface_name_src, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg, unsigned char* interface_name_dst){
+    return (int) -1;
+}

@@ -14,54 +14,52 @@ extern "C"{
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <osip2/osip.h>
+#include <osipparser2/osip_parser.h>
+
 #include "log/log.h"
-#include "net/udp/udp_methode.h"
+#include "net/udp/udp.h"
 
-typedef enum _error_sip{
-	SIP_ERROR_NO         = 0x000,
-	SIP_ERROR_SEND       = 0x001,
-	SIP_ERROR_RECEIVE    = 0x002,
-	SIP_ERROR_IP         = 0x004,
-	SIP_ERROR_PORT       = 0x008,
-	SIP_ERROR_BIND       = 0x010,
-	SIP_ALREADY_CONNECT  = 0x020,
-	SIP_IS_NOT_CONNECT   = 0x040,
-	SIP_ERROR_CONNECT    = 0x080,
-  SIP_NO_MESSAGE       = 0x100,
-	SIP_ERROR_GENERAL    = 0xFFF
-} error_sip;
+#include "linked_list/map.h"
 
-typedef enum _sip_bind_status{
-	SIP_CONNECT    = true,
-	SIP_DISCONNECT = false
-} sip_bind_status;
-
-typedef enum _type_bind_sip_enum{
-	SIP_BIND_NONE         = 0,
-	SIP_BIND_RECEIVER     = 1,
-	SIP_BIND_TRANSMITTER  = 2,
-	SIP_BIND_TRANSCEIVER  = 3
-} type_bind_sip_enum;
-
-type_bind_sip_enum type_bind_sip_str_to_enum(uint8_t *str_in);
+//Status SIP
+#define   SIP_CONNECT     true
+#define   SIP_DISCONNECT  false
 
 typedef struct _sip_socket{
-	sip_bind_status     status;
-	type_bind_sip_enum  type_bind;
-	int       sock;
-	uint8_t  *ip_addr;
-	uint16_t  port;
+	socket_t      *sock;
+  int           status;
+  unsigned char *interface_name;
+  //IP/port binded on this socket
+  unsigned char *ip_host;
+  unsigned int  port_host;
 }sip_socket;
 
-sip_socket* new_sip_socket(uint8_t *ip_addr, uint16_t port, type_bind_sip_enum type_bind);
-void free_sip_socket(sip_socket **p_sip_socket);
+sip_socket* new_sip_socket(unsigned char *interface_name, unsigned char *ip_host, unsigned int port_host);
+void sip_socket_free(sip_socket **p_sip_socket);
 
-error_sip sip_start_connection(sip_socket *p_sip_socket);
-error_sip sip_restart_connection(sip_socket *p_sip_socket);
-error_sip sip_end_connection(sip_socket *p_sip_socket);
-		
-error_sip sip_send_message(sip_socket *p_sip_socket, uint8_t *str_in, uint8_t *ip_addr, uint8_t *port);
-error_sip sip_receive_message(sip_socket *p_sip_socket, uint8_t **str_out);
+int sip_start_connection(sip_socket *p_sip_socket);
+int sip_end_connection(sip_socket *p_sip_socket);
+int sip_restart_connection(sip_socket *p_sip_socket);
+
+int sip_send_message(sip_socket *p_sip_socket, unsigned char *buffer, unsigned char *ip_remote, unsigned int port_remote);
+int sip_receive_message(sip_socket *p_sip_socket, unsigned char **buffer, unsigned int *buffer_len, unsigned char **ip_remote, unsigned int *port_remote);
+
+int sip_receive_sms(sip_socket *p_sip_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **message);
+
+
+int send_sms_to_sip(unsigned char *interface_name, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *message, unsigned char *ip_remote, unsigned int port_remote);
+int send_sms_to_sip_interface(unsigned char *interface_name_src, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *message, unsigned char *interface_name_dst);
+
+/**
+ * Used for MAP and LIST
+ */
+extern map *map_str_sip;
+
+void  free_sip_socket(void **p_p_data);
+void* copy_sip_socket(const void *p_data);
+int   compare_sip_socket(const void *p_data1, const void *p_data2);
+
 
 #endif /* SIP_MNG_H*/
 

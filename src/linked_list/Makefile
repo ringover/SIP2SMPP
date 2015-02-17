@@ -1,8 +1,8 @@
-include ../Makefile.defs
+include ../../Makefile.defs
 
-CONFIG_OBJ = ../OBJ
+CONFIG_OBJ = ../../OBJ
 
-subdirs = daemonize ini log net linked_list threadpool 
+subdirs =  
 
 SRC = $(wildcard *.c*)
 OBJ += $(SRC:.c=.o) $(SRC:.cpp=.o)

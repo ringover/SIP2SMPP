@@ -8,4 +8,5 @@ main
 Makefile.scan
 logFile
 core
-
+OLD/
+TMP/
