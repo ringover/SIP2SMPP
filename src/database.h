@@ -15,9 +15,18 @@ extern "C"{
 #include <stdint.h>
 #include <sys/time.h>
 #include <math.h>
-#include <zdb/Exception.h>
-#include <zdb/SQLException.h>
-#include <zdb/zdb.h>
+
+
+#include "zdb/URL.h"
+#include "zdb/ResultSet.h"
+#include "zdb/PreparedStatement.h"
+#include "zdb/Connection.h"
+#include "zdb/ConnectionPool.h"
+#include "zdb/SQLException.h"
+
+//#include <zdb/Exception.h>
+//#include <zdb/SQLException.h>
+//#include <zdb/zdb.h>
 
 #include "sms_struct.h"
 #include "log/log.h"

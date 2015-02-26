@@ -7,6 +7,7 @@ extern "C"{
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <time.h>
 #include <string.h>
@@ -34,6 +35,10 @@ int do_smpp_bind(socket_t *sock, int bind, unsigned char *user, unsigned char *p
 int do_smpp_bind_transceiver(socket_t *sock, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src);
 int do_smpp_bind_receiver(socket_t *sock, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src);
 int do_smpp_bind_transmitter(socket_t *sock, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src);
+int do_smpp_bind_server(socket_t *sock, char *ip_host, int port_host);
+
+//Client
+int do_smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote, int *bind);
 
 //Send / Receive SMS
 int do_smpp_send_sms(socket_t *sock, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *message, int ton_src, int npi_src, int ton_dst, int npi_dst);

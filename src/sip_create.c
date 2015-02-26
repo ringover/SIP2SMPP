@@ -4,42 +4,51 @@
 
 #include "sip_create.h"
 
+/**
+*  \brief This function allow to create 'Accepted' trame SIP
+*/
+static uint8_t *str_trame_sip_405_method_not_allowed = {
+          "SIP/2.0 405 Method Not Allowed\r\n"
+          "From: sip:%s@%s:%d\r\n"  // user_from - ip_src - port_src
+          "To: sip:%s@%s:%d;tag=1B0QUUmSDeB7B\r\n" // user_to - ip_dst - port_dst
+          "Call-ID: %s\r\n"  //call_id - ip_dst
+          "CSeq: 1 MESSAGE\r\n"
+        };
+
+int create_trame_sip_405_method_not_allowed(uint8_t **str_trame, uint8_t *ip_host, uint32_t port_host, uint8_t *ip_remote, uint32_t port_remote, uint8_t *user_from, uint8_t *user_to, uint8_t *call_id){
+    if(str_trame && ip_host && port_host > 0 && ip_remote && port_remote > 0 && user_from && user_to){
+        if(*str_trame == NULL){
+            *str_trame = (uint8_t*)calloc(2048,sizeof(uint8_t));
+        }
+        sprintf(*str_trame, str_trame_sip_405_method_not_allowed,
+                user_from, ip_host, port_host,
+                user_to, ip_remote, port_remote,
+                call_id);
+        return (int) 0;
+    }
+    return (int) -1;
+}
 
 /**
 *  \brief This function allow to create 'Accepted' trame SIP
-*
-*  \param ip_dst     This parameter is the IP of the SIP gateway 
-*  \param port_dst   This parameter is the Port of the SIP gateway
-*  \param ip_src     This parameter is the IP of the local SIP interface
-*  \param port_src   This parameter is the Port of the local SIP interface
-*  \param user_from  This parameter is a MSISDN of sender 
-*  \param user_to    This parameter is a MSISDN of receiver
-* 
 */
 static uint8_t *str_trame_sip_202_accepted = {
           "SIP/2.0 202 Accepted\r\n"
-          "Via: SIP/2.0/UDP %s\r\n" // ip_src
-          "From: sip:%s@%s:%s\r\n"  // user_from - ip_src - port_src
-          "To: sip:%s@%s:%s;tag=1B0QUUmSDeB7B\r\n" // user_to - ip_dst - port_dst
-          "Call-ID: toto-567854\r\n"
+          "From: sip:%s@%s:%d\r\n"  // user_from - ip_src - port_src
+          "To: sip:%s@%s:%d;tag=1B0QUUmSDeB7B\r\n" // user_to - ip_dst - port_dst
+          "Call-ID: %s\r\n"  //call_id - ip_dst
           "CSeq: 1 MESSAGE\r\n"
-          "Contact: <sip:%s:%s>\r\n" // ip_src - port_src
-          "User-Agent: FreeSWITCH-mod_sofia/1.5.5b+git~20130808T175513Z~4eee5aee8c\r\n"
-          "Allow: INVITE, ACK, BYE, CANCEL, OPTIONS, MESSAGE, INFO, UPDATE, REGISTER, REFER, NOTIFY, PUBLISH, SUBSCRIBE\r\n"
-          "Supported: timer, precondition, path, replaces\r\n"
-          "Content-Length: 0\r\n"
         };
 
-int create_trame_sip_202_accepted(uint8_t **str_trame, uint8_t *ip_host, uint32_t port_host, uint8_t *ip_remote, uint32_t port_remote, uint8_t *user_from, uint8_t *user_to){
+int create_trame_sip_202_accepted(uint8_t **str_trame, uint8_t *ip_host, uint32_t port_host, uint8_t *ip_remote, uint32_t port_remote, uint8_t *user_from, uint8_t *user_to, uint8_t *call_id){
     if(str_trame && ip_host && port_host > 0 && ip_remote && port_remote > 0 && user_from && user_to){
         if(*str_trame == NULL){
             *str_trame = (uint8_t*)calloc(2048,sizeof(uint8_t));
         }
         sprintf(*str_trame, str_trame_sip_202_accepted,
-                ip_host, 
                 user_from, ip_host, port_host,
                 user_to, ip_remote, port_remote,
-                ip_host, port_host);
+                call_id);
         return (int) 0;
     }
     return (int) -1;
@@ -47,20 +56,9 @@ int create_trame_sip_202_accepted(uint8_t **str_trame, uint8_t *ip_host, uint32_
 
 /**
 *  \brief This function allow to create 'Message' trame SIP
-*
-*  \param ip_dst     This parameter is the IP of the SIP gateway
-*  \param port_dst   This parameter is the Port of the SIP gateway
-*  \param ip_src     This parameter is the IP of the local SIP interface
-*  \param port_src   This parameter is the Port of the local SIP interface
-*  \param user_from  This parameter is a MSISDN of sender
-*  \param user_to    This parameter is a MSISDN of receiver
-*  \param msg        This parameter is the messgae of SMS
-*
 */
 static uint8_t *str_trame_sip_message = {
           "MESSAGE sip:%s@%s:%d SIP/2.0\r\n" // user_to - ip_dst - port_dst
-          "Max-Forwards: 70\r\n"
-          "Via: SIP/2.0/UDP %s:%d\r\n" // ip_src port_src
           "From: %s <sip:%s@%s:%d>;tag=%s\r\n" // user_from - user_from - ip_src - port_src - tag
           "To: %s <sip:%s@%s:%d>\r\n" // user_to user_to - ip_dst - port_dst
           "CSeq: 1 MESSAGE\r\n"
@@ -79,11 +77,10 @@ int create_trame_sip_message(uint8_t **str_trame, uint8_t *ip_host, uint32_t por
         uint8_t uuid[] = { "bb27bf00-6329-dfdf" };
         uint8_t tag[] = { "tag543" };
         if(*str_trame == NULL){
-            str_trame = (uint8_t*)calloc(1536 + strlen((char*)msg), sizeof(uint8_t));
+            *str_trame = (uint8_t*)calloc(1536 + strlen((char*)msg), sizeof(uint8_t));
         }
         sprintf(*str_trame, str_trame_sip_message,
             user_to,ip_remote,port_remote,
-            ip_host,port_host,
             user_from,user_from,ip_host,port_host,tag,
             user_to,user_to,ip_remote,port_remote,
             uuid,
@@ -97,35 +94,33 @@ int create_trame_sip_message(uint8_t **str_trame, uint8_t *ip_host, uint32_t por
 
 /**
 *  \brief This function allow to create 'Message' trame SIP
-*
-*  \param ip_dst     This parameter is the IP of the SIP gateway
-*  \param port_dst   This parameter is the Port of the SIP gateway
-*  \param ip_src     This parameter is the IP of the local SIP interface
-*  \param port_src   This parameter is the Port of the local SIP interface
-*  \param user_from  This parameter is a MSISDN of sender
-*  \param user_to    This parameter is a MSISDN of receiver
-*  \param call_id    This parameter is call id
-*
 */
 static uint8_t *str_trame_sip_200_ok = {
           "SIP/2.0 200 OK\r\n"
-          "From: sip:%s@%s:%s\r\n" //user_from - ip_src - port_src
-          "To: sip:%s@%s:%s\r\n" // user_to - ip_dst - port_dst
-          "%s\r\n" //call_id
+          "From: sip:%s@%s:%d\r\n"  // user_from - ip_src - port_src
+          "To: sip:%s@%s:%d;tag=1B0QUUmSDeB7B\r\n" // user_to - ip_dst - port_dst
+          "Call-ID: %s\r\n"  //call_id - ip_dst
           "CSeq: 1 MESSAGE\r\n"
-          "Via: SIP/2.0/UDP %s:%s;alias;received=%s:%s\r\n" // ip_dst - port_dst - ip_src - port_src
-      };
+        };
 
-uint8_t* create_trame_sip_200_ok(uint8_t *ip_dst, uint8_t *port_dst, uint8_t *ip_src, uint8_t *port_src, uint8_t *user_from, uint8_t *user_to, uint8_t *call_id){
-    uint8_t *str_trame = (uint8_t*)calloc(2048,sizeof(uint8_t));
-    sprintf(str_trame,str_trame_sip_200_ok,user_from,ip_src,port_src,user_to,ip_dst,port_dst,call_id,ip_dst,port_dst,ip_src,port_src);
-    return (uint8_t*) str_trame;
+int create_trame_sip_200_ok(uint8_t **str_trame, uint8_t *ip_host, uint32_t port_host, uint8_t *ip_remote, uint32_t port_remote, uint8_t *user_from, uint8_t *user_to, uint8_t *call_id){
+    if(str_trame && ip_host && port_host > 0 && ip_remote && port_remote > 0 && user_from && user_to){
+        if(*str_trame == NULL){
+            *str_trame = (uint8_t*)calloc(2048,sizeof(uint8_t));
+        }
+        sprintf(*str_trame, str_trame_sip_200_ok,
+                user_from, ip_host, port_host,
+                user_to, ip_remote, port_remote,
+                call_id);
+        return (int) 0;
+    }
+    return (int) -1;
 }
 
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////
 //////////////////////////////////////////////////////
-
+/*
 #define DEF_CALL_ID "Call-ID:"
 
 static char* _get_sip_field(char* sip_msg, char* field){
@@ -143,4 +138,5 @@ static char* _get_sip_field(char* sip_msg, char* field){
 uint8_t* get_call_id(uint8_t *sip_msg){
 	return _get_sip_field(sip_msg,DEF_CALL_ID);
 }
+*/
 

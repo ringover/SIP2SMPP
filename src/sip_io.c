@@ -117,6 +117,8 @@ int sip_restart_connection(sip_socket *p_sip_socket){
 int sip_send_message(sip_socket *p_sip_socket, unsigned char *buffer, unsigned char *ip_remote, unsigned int port_remote){
     if(p_sip_socket && p_sip_socket->sock){
         return do_udp_send(p_sip_socket->sock, buffer, (size_t)strlen((char*)buffer), ip_remote, port_remote);
+    }else{
+        ERROR(LOG_SCREEN, "Sent sip message faield")
     }
     return (int) -1;
 }
@@ -140,7 +142,7 @@ int sip_receive_message(sip_socket *p_sip_socket, unsigned char **buffer, unsign
 /**
  * Get message on SIP Message
  */
-int get_message(unsigned char *buffer_in, unsigned char **buffer_out){
+int _get_content(unsigned char *buffer_in, unsigned char **buffer_out){
     char *p_str = buffer_in;
     char *s_str = NULL;
     while((s_str = strstr(p_str, "\r\n")) != NULL){
@@ -155,6 +157,10 @@ int get_message(unsigned char *buffer_in, unsigned char **buffer_out){
     return (int) -1;
 } 
 
+void break_test(){
+	return 0;
+}
+
 
 /**
  * Send/Receive SMS
@@ -162,20 +168,21 @@ int get_message(unsigned char *buffer_in, unsigned char **buffer_out){
 int sip_receive_sms(sip_socket *p_sip_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **msg){
     if(p_sip_socket){
         unsigned char *buffer     = NULL;
+        unsigned char *buffer_resp= NULL;
         unsigned int  buffer_len  = 0;
         unsigned int  port_remote = 0;
         unsigned char *ip_remote  = NULL;
         osip_message_t *message   = NULL;
         osip_call_id_t *call_id   = NULL;
-        //osip_t *osip = NULL;
+        osip_t *osip = NULL;
         int ret = 0;
-        //osip_init(&osip);
+        osip_init(&osip);
 
         if((ret = sip_receive_message(p_sip_socket, &buffer, &buffer_len, &ip_remote, &port_remote)) <= 0){
             ERROR(LOG_SCREEN, "SIP receive failed");
             return (int) -1;
         }
-        
+ 
         if(osip_message_init(&message) != 0){
             ERROR(LOG_FILE | LOG_SCREEN, "Cannot init parse osip")
             return (int) -1;
@@ -188,36 +195,40 @@ int sip_receive_sms(sip_socket *p_sip_socket, unsigned char **from_msisdn, unsig
         }
         
         if(MSG_IS_MESSAGE(message)){
-            if(message->from && message->from->url){
-                from_msisdn = (unsigned char*)calloc(strlen(message->from->url->username), sizeof(char));
-                strcpy((char*)from_msisdn, (char*)message->from->url->username);
+            if(message->from && message->from->url && message->from->url->username){
+                *from_msisdn = (unsigned char*)calloc(strlen(message->from->url->username), sizeof(char));
+                strcpy((char*)*from_msisdn, (char*)message->from->url->username);
             }
-            if(message->from && message->from->url){
-                to_msisdn = (unsigned char*)calloc(strlen(message->to->url->username), sizeof(char));
-                strcpy((char*)to_msisdn, (char*)message->to->url->username);
+            if(message->to && message->to->url && message->to->url->username){
+                *to_msisdn = (unsigned char*)calloc(strlen(message->to->url->username), sizeof(char));
+                strcpy((char*)*to_msisdn, (char*)message->to->url->username);
             }
-            if(get_message(buffer, msg) <= 0){
+            if(_get_content(buffer, msg) <= 0){
                 WARNING(LOG_SCREEN, "Message empty");
             }
-            //TODO: send 202 accepted
-            char buffer[2048] = "";
-            if(create_trame_sip_202_accepted(&buffer, p_sip_socket->ip_host, p_sip_socket->port_host, ip_remote, port_remote, from_msisdn, to_msisdn) == 0){
-                sip_send_message(p_sip_socket, buffer, ip_remote, port_remote);
+            //Sent 200 OK
+            if(create_trame_sip_200_ok(&buffer_resp, p_sip_socket->ip_host, p_sip_socket->port_host, ip_remote, port_remote, *from_msisdn, *to_msisdn, message->call_id->number) == 0){
+                DEBUG(LOG_SCREEN, "Sent 200 OK");
+                sip_send_message(p_sip_socket, buffer_resp, ip_remote, port_remote);
             }
         }else if(MSG_TEST_CODE(message,202) || MSG_TEST_CODE(message,200)){
-            //TODO : clean DB ?  
-            //call_id = message->call_id;
+            //clean DB with helping of call_id => message->call_id;
             WARNING(LOG_SCREEN, "TODO sip method %s", message->sip_method);
         }else{
-            WARNING(LOG_SCREEN, "%s not implemented", message->sip_method);
+            if(create_trame_sip_405_method_not_allowed(&buffer_resp, p_sip_socket->ip_host, p_sip_socket->port_host, ip_remote, port_remote, message->from->url->username, message->to->url->username, message->call_id->number) == 0){
+                DEBUG(LOG_SCREEN, "Sent 405 Method Not Allowed")
+                sip_send_message(p_sip_socket, buffer_resp, ip_remote, port_remote);
+            }
         }
         
+        if(buffer_resp){
+            free(buffer_resp);
+        }
         if(buffer){
             free(buffer);
         }
-        
         osip_message_free(message);
-
+        osip_free(osip);
         return (int) 0;
     }
     return (int) -1;
@@ -226,13 +237,14 @@ int sip_receive_sms(sip_socket *p_sip_socket, unsigned char **from_msisdn, unsig
 int send_sms_to_sip(unsigned char *interface_name, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *message, unsigned char *ip_remote, unsigned int port_remote){
     char *buffer = NULL;
     sip_socket *p_sock = map_get(map_str_sip, interface_name);
-    if(create_trame_sip_message(buffer, p_sock->ip_host, p_sock->port_host, ip_remote, port_remote, from_msisdn, to_msisdn, message) == 0){
-        return sip_send_message(p_sock->sock, buffer, ip_remote, port_remote);
+    if(create_trame_sip_message(&buffer, p_sock->ip_host, p_sock->port_host, ip_remote, port_remote, from_msisdn, to_msisdn, message) == 0){
+        return sip_send_message(p_sock, buffer, ip_remote, port_remote);
+    }else{
+        ERROR(LOG_SCREEN | LOG_FILE, "Create trame sip message is failed")
     }
     if(buffer){
         free(buffer);
     }
-    ERROR(LOG_SCREEN | LOG_FILE, "Create trame sip message is failed")
     return (int) -1;
 }
 

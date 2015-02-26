@@ -19,16 +19,19 @@ int do_udp_receive(socket_t *sock, unsigned char **buffer, size_t *buffer_len, s
             ERROR(LOG_SCREEN | LOG_FILE,"UDP select failed (%d) %s", errno, strerror(errno))
             return (int) -1;
         }
-        ERROR(LOG_SCREEN,"UDP select ok")
-        if(ret > 0  && FD_ISSET(sock->socket, &input_set)){
-            pthread_mutex_lock(&sock->mutex);
-            ERROR(LOG_SCREEN,"mutex UDP select ok")
 
-            if((ret = recvfrom(sock->socket, *buffer, *buffer_len - 1, 0, (struct sockaddr*)from, (socklen_t*)(from?sizeof(struct sockaddr_in):0))) < 0){
+        if(ret > 0  && FD_ISSET(sock->socket, &input_set)){
+            int fromlen = 0;
+            pthread_mutex_lock(&sock->mutex);
+            
+            fromlen = (from?sizeof(*from):0);
+            if((ret = recvfrom(sock->socket, *buffer, *buffer_len, 0, (struct sockaddr*)from, (from?&fromlen:0))) < 0){
+            //if((ret = recvfrom(sock->socket, *buffer, *buffer_len - 1, 0, NULL, 0)) < 0){
                 ERROR(LOG_SCREEN | LOG_FILE,"UDP receive failed (%d) %s", errno, strerror(errno))
-                return (int) -1;
+                ret = -1;
             }
             
+            DEBUG(LOG_SCREEN, "Recv Buffer UDP[%d] : \n%s", ret, *buffer)
             pthread_mutex_unlock(&sock->mutex);
         }
         return (int) ret;
@@ -47,6 +50,8 @@ int do_udp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, char *
         inet_aton(ip_remote, (struct in_addr*)&(to.sin_addr.s_addr));
             
         pthread_mutex_lock(&sock->mutex);
+
+	DEBUG(LOG_SCREEN, "Send Buffer UDP[%d] :\n%s", strlen((char*)buffer), buffer)
 
         if((ret = sendto(sock->socket, buffer, buffer_len, 0, (struct sockaddr*)&to, (socklen_t)sizeof(to))) < 0){
             ERROR(LOG_SCREEN | LOG_FILE, "UDP send failed (%d) %s", errno, strerror(errno))

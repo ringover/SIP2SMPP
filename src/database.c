@@ -27,7 +27,7 @@ static char *query_get_sms_by_status = {
 };
 
 static char *query_update_ttl_sms_by_id = {
-        "UPDATE sms SET ttl=%d WHERE sms.id %lld"
+        "UPDATE sms SET ttl=%d WHERE sms.id = %lld"
 };
 
 static char *query_update_status_sms_by_id = {
@@ -44,7 +44,7 @@ static char *query_insert_sms = {
 };
 static char *query_count_sms = {
         "SELECT COUNT(*) AS count_sms FROM sms "
-        "WHERE status=%d"
+        "WHERE status = %d"
 };
 
 /**

@@ -16,7 +16,7 @@
 typedef struct _socket{
   int  socket;
   //TODO : map with <ip:port,csocket>
-  //void *csocket; //With session (TCP-SCTP)
+  int csocket; //With session (TCP-SCTP)
   pthread_mutex_t mutex;
 } socket_t;
 

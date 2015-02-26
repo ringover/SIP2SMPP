@@ -4,7 +4,7 @@ CC  = gcc
 CXX = g++
 
 #Link eDitor
-LD = $(CXX)
+LD = $(CC)
 
 #LDFLAGS = -Wall -pedantic -g -O3
 LDFLAGS = -Wall -pedantic -g 

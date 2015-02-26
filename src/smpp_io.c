@@ -8,6 +8,11 @@
 smpp_socket* new_smpp_socket(unsigned char *interface_name, unsigned char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, int bind, unsigned char *system_type, int ton_src, int npi_src, int ton_dst, int npi_dst){
     smpp_socket *p_smpp_socket = (smpp_socket*)calloc(1,sizeof(smpp_socket));
 
+/*    if(pthread_mutex_init(&p_smpp_socket->mutex, NULL) != 0){
+        ERROR(LOG_SCREEN, "Error in mutex");
+        return (int)-1;
+    }
+*/
     p_smpp_socket->interface_name = (uint8_t*)calloc(strlen((char*)interface_name)+1,sizeof(uint8_t));
     strcpy((char*)p_smpp_socket->interface_name,(char*)interface_name);
 
@@ -63,6 +68,7 @@ void smpp_socket_free(smpp_socket **p_smpp_socket){
         if((*p_smpp_socket)->sock){
             free((*p_smpp_socket)->sock);
         }
+//	pthread_mutex_destroy(&(*p_smpp_socket)->mutex);
         free(*p_smpp_socket);
         *p_smpp_socket = NULL;
     }
@@ -165,10 +171,14 @@ int smpp_restart_connection(smpp_socket *p_smpp_socket){
 }
 
 int smpp_receive_sms(smpp_socket *p_smpp_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **msg){
+    int res = 0;
     if(p_smpp_socket && (p_smpp_socket->bind == BIND_RECEIVER || p_smpp_socket->bind == BIND_TRANSCEIVER)){
-        return (int) do_smpp_receive_sms(p_smpp_socket->sock,from_msisdn,to_msisdn,msg);
+//	pthread_mutex_lock(&p_smpp_socket->mutex);
+        res = do_smpp_receive_sms(p_smpp_socket->sock,from_msisdn,to_msisdn,msg);
+//	pthread_mutex_unlock(&p_smpp_socket->mutex);
+    }else{
+        ERROR(LOG_SCREEN | LOG_FILE, "SMPP Message don't receive")
     }
-    ERROR(LOG_SCREEN | LOG_FILE, "SMPP Message don't receive")
     return (int) -1;
 }
 
@@ -179,13 +189,13 @@ int smpp_receive_sms(smpp_socket *p_smpp_socket, unsigned char **from_msisdn, un
 *  \param to_msisdn    This parameter is the callee
 *  \param msg          This parameter is the message
 */
-void display_sms(unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg){
+void display_sms(char *from_msisdn, char *to_msisdn, char *msg){
     if(from_msisdn && to_msisdn && msg){
-        INFO(LOG_SCREEN, "------------------------------------------------------"
-                         "  _______  "
-                         " |\\_____/| from msisdn: %s"
-                         " |_______| to msisdn: %s"
-                         " Short Message :\n%s"
+        INFO(LOG_SCREEN, "------------------------------------------------------\n"
+                         "  _______  \n"
+                         " |\\_____/| from msisdn: %s\n"
+                         " |_______| to msisdn: %s\n"
+                         " Short Message :\n%s\n"
                          "------------------------------------------------------"
                          , (char*)from_msisdn, (char*)to_msisdn, (char*)msg)
     }
@@ -194,14 +204,19 @@ void display_sms(unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned 
 
 
 int send_sms_to_smpp(unsigned char* interface_name, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg){
+    int res = 0;
     smpp_socket *p_sock = map_get(map_str_smpp, interface_name);
     if(p_sock->bind == BIND_TRANSMITTER || p_sock->bind == BIND_TRANSCEIVER){
-        return (int) do_smpp_send_sms(p_sock->sock,from_msisdn,to_msisdn,msg,p_sock->ton_src,p_sock->npi_src,p_sock->ton_dst,p_sock->npi_dst);
+//	pthread_mutex_lock(&p_sock->mutex);
+        res =  do_smpp_send_sms(p_sock->sock,from_msisdn,to_msisdn,msg,p_sock->ton_src,p_sock->npi_src,p_sock->ton_dst,p_sock->npi_dst);
+//	pthread_mutex_unlock(&p_sock->mutex);
+    }else{
+        ERROR(LOG_SCREEN | LOG_FILE, "SMPP Message don't send")
     }
-    ERROR(LOG_SCREEN | LOG_FILE, "SMPP Message don't send") 
     return (int) -1;
 }
 
 int send_sms_to_smpp_interface(unsigned char* interface_name_src, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg, unsigned char* interface_name_dst){
     return (int) -1;
 }
+

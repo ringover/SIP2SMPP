@@ -26,7 +26,9 @@ int do_tcp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, int fl
 
 int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flags);
 
-//int tcp_socket_server(socket_t *sock, char *ip_host, int port_host);
+int tcp_socket_server(socket_t *sock, char *ip_host, int port_host);
+int do_tcp_wait_client(socket_t *sock, char **ip_remote, int *port_remote);
+
 int tcp_socket_client(socket_t *sock, unsigned char *ip_remote, int port_remote);
 
 int tcp_close(socket_t *sock);

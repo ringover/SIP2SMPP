@@ -8,7 +8,7 @@ int do_tcp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, int fl
     ret = send(sock->socket, buffer, buffer_len, flag);
     if(ret != buffer_len){
         ERROR(LOG_FILE | LOG_SCREEN, "TCP send failed [%d]-> %s", errno, strerror(errno))
-        return(int32_t) -1;
+        return (int) -1;
     }
 
     pthread_mutex_unlock(&sock->mutex);
@@ -36,7 +36,7 @@ int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int fl
                 ERROR(LOG_FILE | LOG_SCREEN, "Client disconected")
                 //client disconected
             }
-            INFO(LOG_SCREEN, "Recv Msg[%d]", ret);
+            INFO(LOG_SCREEN, "Recv Msg[%d:%d]\n%s", ret, buffer_len, buffer);
 
             pthread_mutex_unlock(&sock->mutex);
         }
@@ -44,7 +44,7 @@ int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int fl
     }
 }
 
-/*
+
 int tcp_socket_server(socket_t *sock, char *ip_host, int port_host){
     int optval  = 1;
     int res     = 0;
@@ -77,12 +77,12 @@ int tcp_socket_server(socket_t *sock, char *ip_host, int port_host){
       }
       if((res = bind(sock->socket, (struct sockaddr*) &sin, sizeof(sin))) == -1){
           ERROR(LOG_SCREEN | LOG_FILE,"UDP Bind failed (%d) %s", errno, strerror(errno));
-          return (int)res;
+          return (int)-1;
       }
     }
 
  
-    if((res = listen(sock->socket, 5)) == -1){
+    if((res = listen(sock->socket, 1)) == -1){
         ERROR(LOG_SCREEN | LOG_FILE,"Listen failed (%d) %s", errno, strerror(errno));
         return (int)-1;
     }
@@ -91,7 +91,26 @@ int tcp_socket_server(socket_t *sock, char *ip_host, int port_host){
     //accept()
     return 0;
 }
-*/
+
+int do_tcp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
+    int res = 0;
+    if(sock && ip_remote && port_remote){
+        struct sockaddr_in sin = { 0 };
+        int sinsize = sizeof(sin);
+        
+        DEBUG(LOG_SCREEN, "Waiting a client TCP ...");
+        if((res = accept(sock->socket, &sin, &sinsize)) == -1){
+            ERROR(LOG_FILE | LOG_SCREEN, "Accept TCP failes[%d] %s", errno, strerror(errno))
+            return (int) res;
+	}
+
+        *port_remote = ntohs(sin.sin_port);
+        *ip_remote   = inet_ntoa(sin.sin_addr);
+        DEBUG(LOG_SCREEN, "The TCP client is %s:%d", *ip_remote, *port_remote);
+    }
+    //return 0 or client_socket
+    return (int) res;
+}
 
 /**
  * \brief This function allow connect the socket in parametter

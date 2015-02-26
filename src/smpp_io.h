@@ -41,6 +41,7 @@ typedef struct _smpp_socket{
     //Remote server
     unsigned char *ip_remote;
     unsigned int   port_remote;
+    pthread_mutex_t mutex;
     //Login/Password
 //    unsigned char user[16];
 //    unsigned char passwd[9];
@@ -67,7 +68,7 @@ int smpp_end_connection(smpp_socket *p_smpp_socket);
 int smpp_send_sms(smpp_socket *p_smpp_socket, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg);
 int smpp_receive_sms(smpp_socket *p_smpp_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **msg);
 
-void display_sms(unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg);
+void display_sms(char *from_msisdn, char *to_msisdn, char *msg);
 
 int send_sms_to_smpp(unsigned char* interface_name, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg);
 int send_sms_to_smpp_interface(unsigned char* interface_name_src, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg, unsigned char* interface_name_dst);

@@ -38,8 +38,10 @@
 //OTHER
 //#include "type_projet.h"
 #include "sms_struct.h"
+#include "routing.h"
 #include "database.h"
 #include "daemonize/daemonize.h"
+
 
 threadpool_t *p_threadpool = NULL;
 
@@ -106,7 +108,7 @@ static void* routing_thread(void *data){
     int res = -1;
     //Update DB : PENDING -> ONGOING
     if(*status == PENDING){
-        db_update_sms_status_by_id(id, ONGOING);
+        db_update_sms_status_by_id(*id, ONGOING);
     }
     //Routing SMS
     //if(p_fun_routing != NULL){
@@ -116,12 +118,14 @@ static void* routing_thread(void *data){
     //}
     res = routing(interface, ip_origin, *port_origin, msisdn_src, msisdn_dst, message);
 
+    //ERROR(LOG_SCREEN, "&&&&&&&&&&&&&&&&&&&&&&&&&&routing res = %d - id = %d", res, id)
+
     //Update DB : DELETE SMS if sent else --TTL
-    if(res != 0){
-        db_delete_sms_by_id(id);
+    if(res > 0){
+        db_delete_sms_by_id(*id);
         count_sms--;
     }else{
-        db_update_sms_ttl_by_id(id, --(*ttl)); 
+        db_update_sms_ttl_by_id(*id, --(*ttl)); 
     }
     if(id){
         free(id);
@@ -199,7 +203,7 @@ static void* func_listen_smpp(void *data){
         smpp_receive_sms(p_socket, &p_from_msisdn, &p_to_msisdn, &p_msg);//&p_ip_origin, &port_origin);
         //TMP
         p_ip_origin = (unsigned char*)calloc(25, sizeof(char));
-        p_ip_origin = "not_implemented(smpp)";
+        strcpy(p_ip_origin,"not_implemented(smpp)");
         port_origin = 5060;
         //END TMP
         if(p_from_msisdn && p_to_msisdn && p_msg && p_ip_origin && port_origin > 0){
@@ -234,7 +238,6 @@ static void* func_listen_smpp(void *data){
             //pthread_create();
             threadpool_add(p_threadpool, routing_thread, p_t_data, 0);
         }else{
-            ERROR(LOG_FILE | LOG_SCREEN, "Receive SMPP is corrupt")
             if(p_from_msisdn) free(p_from_msisdn);
             if(p_to_msisdn) free(p_to_msisdn);
             if(p_msg) free(p_msg);
@@ -283,12 +286,13 @@ static void* func_listen_sip(void *data){
     }
 
     while(p_socket->status == SMPP_CONNECT){
-        sip_receive_sms(p_socket, &p_to_msisdn, &p_to_msisdn, &p_msg);//&p_ip_origin, &port_origin);
+        sip_receive_sms(p_socket, &p_from_msisdn, &p_to_msisdn, &p_msg);//&p_ip_origin, &port_origin);
         //TMP
         p_ip_origin = (unsigned char*)calloc(25, sizeof(char));
-        p_ip_origin = "not_implemented(sip)";
+        strcpy(p_ip_origin,"not_implemented(smpp)");
         port_origin = 5060;
         //END TMP
+        
         if(p_from_msisdn && p_to_msisdn && p_msg && p_ip_origin && port_origin > 0){
             display_sms(p_from_msisdn, p_to_msisdn, p_msg);//, p_ip_origin, port_origin);
             id = db_insert_sms(p_socket->interface_name, p_ip_origin, port_origin, p_from_msisdn, p_to_msisdn, p_msg, PENDING, 5);
@@ -321,7 +325,6 @@ static void* func_listen_sip(void *data){
             //pthread_create();
             threadpool_add(p_threadpool, routing_thread, p_t_data, 0);
         }else{
-            ERROR(LOG_FILE | LOG_SCREEN, "Receive SIP is corrupt")
             if(p_from_msisdn) free(p_from_msisdn);
             if(p_to_msisdn) free(p_to_msisdn);
             if(p_msg) free(p_msg);
@@ -422,6 +425,10 @@ int main(int argc,char **argv){
         //db_select_sms_count(PENDING, &count_sms);
     }
 
+    if(start_routing() != 0){
+        ERROR(LOG_FILE | LOG_SCREEN, "Routing loading failed");
+    }
+
     printf("%sVersion          %s: [%s]\n", GREEN, END_COLOR, VERSION);
     printf("%sPid file         %s: [%s]\n", GREEN, END_COLOR, pid_file);
     printf("-------     %s     -------\n" , conffile);
@@ -507,6 +514,8 @@ int main(int argc,char **argv){
 //    pthread_join(checkDBconnection,NULL);
 
     free_file_ini(SECTION_ALL);
+
+    close_routing();
 
     handler(0);
     return 0;
