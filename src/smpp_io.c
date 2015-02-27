@@ -1,10 +1,6 @@
-/**
-*  \file ConnectionSMPP.cpp
-*  
-*  \brief This file contain all function to the Connection_SMPP object.
-*  
-*/
-#include "smpp_io.h"
+
+#include "smpp_engine.h"
+
 smpp_socket* new_smpp_socket(unsigned char *interface_name, unsigned char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, int bind, unsigned char *system_type, int ton_src, int npi_src, int ton_dst, int npi_dst){
     smpp_socket *p_smpp_socket = (smpp_socket*)calloc(1,sizeof(smpp_socket));
 
@@ -170,25 +166,6 @@ int smpp_restart_connection(smpp_socket *p_smpp_socket){
     return (int) smpp_start_connection(p_smpp_socket->sock);
 }
 
-int smpp_receive_sms(smpp_socket *p_smpp_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **msg){
-    int res = 0;
-    if(p_smpp_socket && (p_smpp_socket->bind == BIND_RECEIVER || p_smpp_socket->bind == BIND_TRANSCEIVER)){
-//	pthread_mutex_lock(&p_smpp_socket->mutex);
-        res = do_smpp_receive_sms(p_smpp_socket->sock,from_msisdn,to_msisdn,msg);
-//	pthread_mutex_unlock(&p_smpp_socket->mutex);
-    }else{
-        ERROR(LOG_SCREEN | LOG_FILE, "SMPP Message don't receive")
-    }
-    return (int) -1;
-}
-
-/**
-*  \brief This function allow to display a SMS
-*
-*  \param from_msisdn  This parameter is the caller 
-*  \param to_msisdn    This parameter is the callee
-*  \param msg          This parameter is the message
-*/
 void display_sms(char *from_msisdn, char *to_msisdn, char *msg){
     if(from_msisdn && to_msisdn && msg){
         INFO(LOG_SCREEN, "------------------------------------------------------\n"
@@ -202,7 +179,158 @@ void display_sms(char *from_msisdn, char *to_msisdn, char *msg){
     return;
 }
 
+/**
+ * SMPP PROCESSING
+ */
+static int _strcpy(char **str_out, char str_in);
+static int _strcpy(char **str_out, char str_in){
+    if(str_out && *str_out == NULL && strlen(str_in) > 0){
+        *str_out = (char*)calloc(strlen(str_in)+1, sizeof(char));
+        strcpy(*str_out, str_in);
+        return (int) 0;
+    }
+	  return (int) -1;
+}
 
+int smpp_processing_sm(void *data, char **from, char **to, char **msg, unsigned int *sequence_number){
+    int ret = -1;
+    if(data && from && to && msg && sequence_num){
+        data_sm_t *req = (data_sm_t*)data;
+        switch(req->command_id){
+            case DELIVER_SM : //client
+            {   //copy SMS
+                deliver_sm_t *deliver = (deliver_sm_t*)data;
+                if(_strcpy(from, deliver->source_addr) == 0){
+                    ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid source_addr")
+                }
+                if(_strcpy(to, deliver->destination_addr) == 0){
+                    ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid destination_addr")
+                }
+                if(_strcpy(msg, deliver->short_message) == 0){//TODO tlv :    || _strcpy(msg, deliver->tlv.value.octet) == 0){
+                    ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid short_message")
+                }
+            }
+                break;
+            case SUBMIT_SM : //server
+            {   //copy SMS
+                submit_sm_t *submit = (submit_sm_t*)data;
+                if(_strcpy(from, submit->source_addr) == 0){
+                    ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid source_addr")
+                }
+                if(_strcpy(to, submit->destination_addr) == 0){
+                    ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid destination_addr")
+                }
+                if(_strcpy(msg, submit->short_message) == 0){//TODO tlv :    || _strcpy(msg, submit->tlv.value.octet) == 0){
+                    ERROR(LOG_SCREEN | LOG_FILE ,"Error invalid short_message")
+                }
+            }
+                break;
+            case SUBMIT_MULTI :
+                WARNING(LOG_SCREEN, "SUBMIT_MULTI not allowed");
+                break;
+            default :
+                WARNING(LOG_SCREEN, "Data parameter is not a SMS");
+                break;
+        }
+        *sequence_number = req->sequence_number;
+    }
+    return (int) ret;
+}
+
+int smpp_processing_request(socket_t *sock, const void *data){
+    int ret = -1;
+    if(data){
+        data_sm_t *req = (data_sm_t*)data;
+        switch(req->command_id){
+            case UNBIND :
+                //Response
+                ret = smpp_send_response(sock, UNBIND_RESP, req->sequence_number, 0);
+                //processing
+                //TODO
+                break;
+            case ENQUIRE_LINK :
+                ret = smpp_send_response(sock, ENQUIRE_LINK_RESP, req->sequence_number, 0);
+                break;
+            case QUERY_SM :
+                //TODO
+                ret = smpp_send_response(sock, QUERY_SM_RESP, req->sequence_number, ESME_RINVCMDID);
+                WARNING(LOG_SCREEN, "QUERY_SM not allowed")
+                break;
+            case REPLACE_SM :
+                //TODO
+                ret = smpp_send_response(sock, REPLACE_SM_RESP, req->sequence_number, ESME_RINVCMDID);
+                WARNING(LOG_SCREEN, "REPLACE_SM not allowed")
+                break;
+            case CANCEL_SM :
+                //TODO
+                ret = smpp_send_response(sock, CANCEL_SM_RESP, req->sequence_number, ESME_RINVCMDID);
+                WARNING(LOG_SCREEN, "CANCEL_SM not allowed")
+                break;
+            default:
+                ret = smpp_send_response(sock, DATA_SM_RESP, req->sequence_number, ESME_RINVCMDID);
+                ERROR(LOG_SCREEN | LOG_FILE ,"Request not allowed [%d:%d]", req.command_id, req.command_status)
+                break;
+        }
+    }
+    return (int) ret;
+}
+
+int smpp_processing_response(void *data){
+    int ret = -1;
+    if(data){
+        data_sm_resp_t *resp = (data_sm_resp_t*)data;
+        switch(resp->command_id){
+            case DELIVER_SM_RESP :
+                deliver_sm_resp_t *deliver = (deliver_sm_resp_t*)data;
+                
+                break;
+            case SUBMIT_SM_RESP :
+                submit_sm_resp_t *submit = (submit_sm_resp_t*)data;
+                
+                break;
+            case UNBIND_RESP :
+                //TODO
+                WARNING(LOG_SCREEN, "UNBIND_RESP not allowed")
+                break;
+            case ENQUIRE_LINK_RESP :
+                //TODO
+                WARNING(LOG_SCREEN, "ENQUIRE_LINK_RESP not allowed")
+                break;
+
+            case QUERY_SM_RESP :
+                //TODO
+                WARNING(LOG_SCREEN, "QUERY_SM_RESP not allowed")
+                break;
+            case REPLACE_SM_RESP :
+                //TODO
+                WARNING(LOG_SCREEN, "REPLACE_SM_RESP not allowed")
+                break;
+            case CANCEL_SM_RESP :
+                //TODO
+                WARNING(LOG_SCREEN, "CANCEL_SM_RESP not allowed")
+                break;
+            default :  
+                WARNING(LOG_SCREEN, "Response not allowed[%d]", resp->command_id);
+                break;
+        }
+    }
+    return (int) ret;
+}
+
+/**
+ * SMPP Engine
+ * in main file
+ */
+int smpp_engine(){
+    int ret = -1;
+    //smpp_scan_sock();
+    //...
+    return (int) ret;
+}
+
+/**
+ * Routing function
+ */
 int send_sms_to_smpp(unsigned char* interface_name, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg){
     int res = 0;
     smpp_socket *p_sock = map_get(map_str_smpp, interface_name);
@@ -219,4 +347,6 @@ int send_sms_to_smpp(unsigned char* interface_name, unsigned char *from_msisdn, 
 int send_sms_to_smpp_interface(unsigned char* interface_name_src, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *msg, unsigned char* interface_name_dst){
     return (int) -1;
 }
+
+
 

@@ -12,6 +12,7 @@
 #include <netinet/ether.h>
 #include <linux/if_packet.h>
 #include <linux/if_ether.h>
+#include <pthread.h>
 
 typedef struct _socket{
   int  socket;
