@@ -22,9 +22,9 @@ extern "C"{
 #include "../net_struct.h"
 #include "../../log/log.h"
 
-int do_tcp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flag);
+inline int do_tcp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flag);
 
-int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flags);
+inline int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flags);
 
 int tcp_socket_server(socket_t *sock, char *ip_host, int port_host);
 int do_tcp_wait_client(socket_t *sock, char **ip_remote, int *port_remote);

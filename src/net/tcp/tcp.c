@@ -1,6 +1,6 @@
 #include "tcp.h"
 
-int do_tcp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flag){
+inline int do_tcp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flag){
     int ret = 0;
 
     pthread_mutex_lock(&sock->mutex);
@@ -15,9 +15,9 @@ int do_tcp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, int fl
     return ret;
 }
 
-int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flags){
+inline int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flags){
+    int ret = -1;
     if(buffer && buffer_len > 0){
-        int ret = 0;
         fd_set input_set;
 
         FD_ZERO(&input_set);
@@ -28,7 +28,7 @@ int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int fl
         }
         if(ret > 0 && FD_ISSET(sock->socket, &input_set)){
             pthread_mutex_lock(&sock->mutex);
-        
+            
             if((ret = recv(sock->socket, buffer, buffer_len, flags)) == -1){
                 ERROR(LOG_FILE | LOG_SCREEN, "packet receive error [%d]-> %s", errno, strerror(errno))
             }
@@ -36,12 +36,14 @@ int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len, int fl
                 ERROR(LOG_FILE | LOG_SCREEN, "Client disconected")
                 //client disconected
             }
-            INFO(LOG_SCREEN, "Recv Msg[%d:%d]\n%s", ret, buffer_len, buffer);
+            INFO(LOG_SCREEN, "Recv Msg[%d:%d]\n%s", ret, buffer_len, buffer)
 
             pthread_mutex_unlock(&sock->mutex);
         }
-        return (int)ret;
+
+        FD_CLR(sock->socket, &input_set);
     }
+    return (int) ret;
 }
 
 

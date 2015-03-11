@@ -26,7 +26,7 @@ extern "C" {
 int udp_socket(socket_t *sock, unsigned char *ip_host, unsigned int port_host);
 int udp_close(socket_t *sock);
 
-int do_udp_receive(socket_t *sock, unsigned char **buffer, size_t *buffer_len, struct sockaddr_in *from);
+int do_udp_receive(socket_t *sock, unsigned char *buffer, size_t buffer_len, struct sockaddr_in *from);
 int do_udp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, char *ip_remote, unsigned int port_remote);
 
 #endif /* UDP_H */

@@ -26,7 +26,6 @@ extern "C"{
 
 #include "../net_struct.h"
 
-#include "../../tools.h"
 #include "../../log/log.h"
 
 #define RESP 0x80000000
@@ -37,6 +36,10 @@ extern "C"{
 ////            RECV SMPP           /////
 ////                                /////
 /////////////////////////////////////////
+
+inline int smpp_receive(socket_t *sock, char *buffer, size_t buffer_len);
+
+inline int smpp_parser(char *buffer, int len, void *data);
 
 int smpp_scan_sock(socket_t *sock, void *res);
 

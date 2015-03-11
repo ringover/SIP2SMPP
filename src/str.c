@@ -1,13 +1,6 @@
 
 #include "str.h"
 
-void string_copy(char** str1, char* str2){
-        *str1=(char*)malloc(sizeof(char)*(strlen(str2)+1));
-        memset(*str1,0,sizeof(char)*(strlen(str2)+1));
-        strcpy(*str1,str2);
-        return;
-}
-
 /**
  * Count the number of occurences to 'occurence' in input string 'str_in'
  */
@@ -99,24 +92,5 @@ void del_occurrence(char* str_in, int cpt, ...){
         }
     }
     va_end(ap);
-}
-
-/**
- * for the map library
- */
-void free_string(void **s){
-//    free(*s);
-//    *s = NULL;
-    return;
-}
-
-void* copy_string(const void *s){
-  char *str_out = NULL;
-  string_copy(&str_out, (char*)s);
-  return (void*) str_out;
-}
-
-int compare_string(const void *a, const void *b){
-  return (int) strcmp((char*)a, (char*)b);
 }
 

@@ -29,11 +29,11 @@ extern char smpp34_strerror[2048];
 // Static Functions
 //////
 
-static int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg, int command_id, unsigned int *sequence_number, int src_ton, int src_npi, int dst_ton, int dst_npi);
-static int _smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned int command_status, unsigned int *sequence_number);
-static void _init_pdu_header_(void *data, unsigned int command_id, unsigned int command_status, unsigned int sequence_number);
-static int _dump_pdu_and_buf(char *buffer, int len, void* data, char *communication_mode);
-static int _smpp_pack_and_send(socket_t *sock, void *data);
+static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg, int command_id, unsigned int *sequence_number, int src_ton, int src_npi, int dst_ton, int dst_npi);
+static inline int _smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned int command_status, unsigned int *sequence_number);
+static inline void _init_pdu_header_(void *data, unsigned int command_id, unsigned int command_status, unsigned int sequence_number);
+static inline int _dump_pdu_and_buf(char *buffer, int len, void* data, char *communication_mode);
+static inline int _smpp_pack_and_send(socket_t *sock, void *data);
 static unsigned int _get_sequence_number();
 
 /////////////////////////////////////////
@@ -44,29 +44,29 @@ static unsigned int _get_sequence_number();
 /////////////////////////////////////////
 
 //Display trame SMPP
-static int _dump_pdu_and_buf(char *buffer, int len, void* data, char *communication_mode){
-    int ret = -1;
-    if(buffer && len > 0 && communication_mode && data && log_get_display() >= LOG_INFO){
+static inline int _dump_pdu_and_buf(char *buffer, int len, void* data, char *communication_mode){
+    if(log_get_display() >= LOG_INFO && buffer && len > 0 && communication_mode && data){
         unsigned char print_buffer[8192] = { 0 };
         //Print Buffer
         memset(print_buffer, 0, sizeof(print_buffer));
         if((ret = smpp34_dumpBuf(print_buffer, sizeof(print_buffer), buffer, len)) != 0){
             ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_dumpBuf():%d:\n%s\n", smpp34_errno, smpp34_strerror )
-            return (int) ret;
+            return (int) -1;
         }
         INFO(LOG_SCREEN, "-----------------------------------------------------------\n"
-                         "%s BUFFER \n%s\n", communication_mode, print_buffer);
+                         "%s BUFFER \n%s\n", communication_mode, print_buffer)
 
         //Print PDU
         memset(print_buffer, 0, sizeof(print_buffer));
         if((ret = smpp34_dumpPdu2(print_buffer, sizeof(print_buffer), (void*)data)) != 0){
             ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_dumpPdu():%d:\n%s\n", smpp34_errno, smpp34_strerror);
-            return (int) ret;
+            return (int) -1;
         }
         INFO(LOG_SCREEN, "%s PDU \n%s\n"
                          "-----------------------------------------------------------\n", communication_mode, print_buffer)
+        return (int) 0;
     }
-    return (int) ret;
+    return (int) -1;
 }
 
 
@@ -78,7 +78,8 @@ static int _dump_pdu_and_buf(char *buffer, int len, void* data, char *communicat
 /////////////////////////////////////////
 
 //Recv_end_unpack
-int smpp_scan_sock(socket_t *sock, void *res){
+/*
+int smpp_scan_sock(socket_t *sock, void *data){
     unsigned char buffer[2048] = { 0 };
     size_t buffer_len = sizeof(buffer);
     int len = 0;
@@ -89,15 +90,40 @@ int smpp_scan_sock(socket_t *sock, void *res){
     }
 
     //Unpack PDU
-    if((ret = smpp34_unpack2((void*)res, buffer, len)) != 0){
+    if((ret = smpp34_unpack2((void*)data, buffer, len)) != 0){
         ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_unpack():%d:%s\n", smpp34_errno, smpp34_strerror)
         return (int)-1;
     }
 
-    return (int) _dump_pdu_and_buf((char*)buffer, len, res, "RECEIVE");
+    return (int) _dump_pdu_and_buf((char*)buffer, len, data, "RECEIVE");
+}
+*/
+inline int smpp_receive(socket_t *sock, char *buffer, size_t buffer_len){
+    return do_tcp_recv(sock, buffer, buffer_len, 0);
 }
 
+inline int smpp_parser(char *buffer, int len, void *data){
+    //Unpack PDU
+    if(smpp34_unpack2((void*)data, buffer, len) != 0){
+        ERROR(LOG_FILE | LOG_SCREEN, "Error in smpp34_unpack():%d:%s\n", smpp34_errno, smpp34_strerror)
+        return (int) -1;
+    }
 
+    return (int) _dump_pdu_and_buf((char*)buffer, len, data, "RECEIVE");
+}
+
+int smpp_scan_sock(socket_t *sock, void *data){
+    unsigned char buffer[2048] = { 0 };
+    size_t buffer_len = sizeof(buffer);
+    int ret = 0;
+    if((ret = smpp_receive(sock, buffer, buffer_len)) == -1){
+        return (int) -1;
+    }
+    if((ret = smpp_parser(buffer, ret, data)) != 0){
+        return (int) -1;
+    }
+    return (int) ret;
+}
 
 /////////////////////////////////////////
 ////                                /////
@@ -110,7 +136,7 @@ int smpp_scan_sock(socket_t *sock, void *res){
 // Static Function used for SMPP SEND
 /////
 
-static int _smpp_pack_and_send(socket_t *sock, void *data){
+static inline int _smpp_pack_and_send(socket_t *sock, void *data){
     char buffer[2048] = { 0 };
     int buffer_len = sizeof(buffer);
     int local_len  = 0;
@@ -137,7 +163,7 @@ static unsigned int _get_sequence_number(){
     return (unsigned int) sequence_number;
 }
 
-static void _init_pdu_header(void *data, unsigned int command_id, unsigned int command_status, unsigned int sequence_number){
+static inline void _init_pdu_header(void *data, unsigned int command_id, unsigned int command_status, unsigned int sequence_number){
     if(data){
         generic_nack_t *gen = (generic_nack_t*)data;
         gen->command_length = 0;
@@ -152,7 +178,7 @@ static void _init_pdu_header(void *data, unsigned int command_id, unsigned int c
     return;
 }
 
-static int _smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned int command_status, unsigned int *sequence_number){
+static inline int _smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned int command_status, unsigned int *sequence_number){
     int ret = -1;
     //UNBIND || ENQUIRE_LINK 
     //UNBIND_RESP || ENQUIRE_LINK_RESP || CANCEL_RESP || REPLACE_SM_RESP 
@@ -167,7 +193,7 @@ static int _smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned 
     return (int) ret;
 }
 
-static int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg, int command_id, unsigned int *sequence_number, int src_ton, int src_npi, int dst_ton, int dst_npi){
+static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg, int command_id, unsigned int *sequence_number, int src_ton, int src_npi, int dst_ton, int dst_npi){
     int ret = -1;
     if(sock && from && to && msg){
         submit_sm_t req = { 0 };
@@ -376,6 +402,7 @@ int smpp_send_bind_client(socket_t *sock, int command_id, char *ip_remote, unsig
 
     if((ret = _smpp_pack_and_send(sock, (void*)&bind)) == -1){
         ERROR(LOG_SCREEN | LOG_FILE, "Sent BIND failed")
+        tcp_close(sock);
     }
 
     return (int) ret;

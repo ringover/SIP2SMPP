@@ -1,15 +1,10 @@
 
 #include "udp.h"
 
-int do_udp_receive(socket_t *sock, unsigned char **buffer, size_t *buffer_len, struct sockaddr_in *from){
-    if(sock && buffer && buffer_len){
+int do_udp_receive(socket_t *sock, unsigned char *buffer, size_t buffer_len, struct sockaddr_in *from){
+    if(sock && buffer && buffer_len > 0){
         int ret = 0;
         fd_set input_set;
-
-        if(*buffer == NULL){
-            *buffer_len = 2048;
-            *buffer = (unsigned char*)calloc(2049, sizeof(unsigned char));
-        }
 
 //        memset(*buffer, 0, (*buffer_len)*sizeof(unsigned char));
         FD_ZERO(&input_set);
@@ -25,7 +20,7 @@ int do_udp_receive(socket_t *sock, unsigned char **buffer, size_t *buffer_len, s
             pthread_mutex_lock(&sock->mutex);
             
             fromlen = (from?sizeof(*from):0);
-            if((ret = recvfrom(sock->socket, *buffer, *buffer_len, 0, (struct sockaddr*)from, (from?&fromlen:0))) < 0){
+            if((ret = recvfrom(sock->socket, buffer, buffer_len, 0, (struct sockaddr*)from, (from?&fromlen:0))) < 0){
             //if((ret = recvfrom(sock->socket, *buffer, *buffer_len - 1, 0, NULL, 0)) < 0){
                 ERROR(LOG_SCREEN | LOG_FILE,"UDP receive failed (%d) %s", errno, strerror(errno))
                 ret = -1;

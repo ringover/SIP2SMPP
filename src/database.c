@@ -5,16 +5,17 @@
 // Statement DB
 ///////////
 static char *create_stmts = {
-        "CREATE TABLE IF NOT EXISTS sms ("
+        "CREATE TABLE IF NOT EXISTS sm ("
                 "id INTEGER PRIMARY KEY, "
+                "call_id text, "
+                "sequence_number INTEGER, "
                 "interface VARCHAR(64), "
-                "ip_origin VARCHAR(20), "
+                "ip_origin VARCHAR(16), "
                 "port_origin INTEGER, "
-                "ttl TINYINT, "             //time to live : 3 by default 
-                "status TINYINT, "          //PENDING(0) || ONGOING(1)
-                "src VARCHAR(64), "
-                "dst VARCHAR(64), "
-                "msg VARCHAR(1024)"
+                "src VARCHAR(32), "
+                "dst VARCHAR(32), "
+                "msg TEXT"
+                "creation DATETIME"
                 ")"
         };
 
@@ -22,29 +23,29 @@ static char *create_stmts = {
 // Queries
 ///////////
 
-static char *query_get_sms_by_status = {
-        "SELECT * FROM sms WHERE status = %d LIMIT 1"
+static char *query_get_sm_by_id = {
+        "SELECT * FROM sm WHERE sm.id = %lld"
 };
 
-static char *query_update_ttl_sms_by_id = {
-        "UPDATE sms SET ttl=%d WHERE sms.id = %lld"
+static char *query_get_all_sm = {
+        "SELECT * FROM sm"
 };
 
-static char *query_update_status_sms_by_id = {
-        "UPDATE sms SET status=%d WHERE sms.id = %lld"
+static char *query_get_first_sm = {
+        "SELECT * FROM sm LIMIT 1"
 };
 
-static char *query_delete_sms_by_id = {
-        "DELETE FROM sms WHERE sms.id = %lld"
+static char *query_delete_sm_by_id = {
+        "DELETE FROM sm WHERE sm.id = %lld"
 };
 
-static char *query_insert_sms = {
-        "INSERT INTO sms (interface,ip_origin,port_origin,ttl,status,src,dst,msg) "
-        "VALUES('%s','%s',%d,%d,%d,'%s','%s','%s')"
+static char *query_insert_sm = {
+        "INSERT INTO sm (call_id,sequence_number,interface,ip_origin,port_origin,src,dst,msg,creation) "
+        "VALUES('%s',%d,'%s','%s',%d,'%s','%s','%s',date('now'))"
 };
-static char *query_count_sms = {
-        "SELECT COUNT(*) AS count_sms FROM sms "
-        "WHERE status = %d"
+
+static char *query_count_sm = {
+        "SELECT COUNT(*) AS count_sm FROM sm"
 };
 
 /**
@@ -105,12 +106,12 @@ int db_prepare(void){
  * Function Query
  */
 
-long long int db_insert_sms(unsigned char *interface, unsigned char *ip_origin, unsigned int port_origin, unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status, int ttl){
+long long int db_insert_sm(unsigned char *call_id, unsigned int sequence_number, unsigned char *interface, unsigned char *ip_origin, unsigned int port_origin, unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg){
     int ret = 0;
     Connection_T con = ConnectionPool_getConnection(pool);
     TRY
-        //"INSERT INTO sms (interface,ip_origin,port_origin,ttl,status,src,dst,msg) "
-        Connection_execute(con, query_insert_sms, interface, ip_origin, port_origin, ttl, (int)status, msisdn_src, msisdn_dst, msg);
+        //"INSERT INTO sm (interface,ip_origin,port_origin,ttl,status,src,dst,msg) "
+        Connection_execute(con, query_insert_sm, call_id, sequence_number, interface, ip_origin, port_origin, msisdn_src, msisdn_dst, msg);
         ret = Connection_lastRowId(con);
     CATCH(SQLException)
         ERROR(LOG_SCREEN | LOG_FILE,"The insert database is failed");
@@ -120,11 +121,11 @@ long long int db_insert_sms(unsigned char *interface, unsigned char *ip_origin, 
     return (long long int) ret;
 }
 
-int db_delete_sms_by_id(long long int id){
+int db_delete_sm_by_id(long long int id){
     int ret = 0;
     Connection_T con = ConnectionPool_getConnection(pool);
     TRY
-        Connection_execute(con, query_delete_sms_by_id, id);
+        Connection_execute(con, query_delete_sm_by_id, id);
     CATCH(SQLException)
         ERROR(LOG_SCREEN | LOG_FILE,"The delete database is failed");
         ret = -1;
@@ -133,45 +134,15 @@ int db_delete_sms_by_id(long long int id){
     return (int) ret;
 }
 
-int db_update_sms_status_by_id(long long int id, db_status new_status){
-    int ret = 0;
-    Connection_T con = ConnectionPool_getConnection(pool);
-    TRY
-        Connection_execute(con, query_update_status_sms_by_id, (int)new_status, id);
-    CATCH(SQLException)
-        ERROR(LOG_SCREEN | LOG_FILE,"The update database is failed");
-        ret = -1;
-    END_TRY;
-    Connection_close(con);
-    return (int) ret;
-}
-
-int db_update_sms_ttl_by_id(long long int id, int new_ttl){
-    int ret = 0;
-    if(new_ttl > 0){
-        Connection_T con = ConnectionPool_getConnection(pool);
-        TRY
-            Connection_execute(con, query_update_ttl_sms_by_id, new_ttl, id);
-        CATCH(SQLException)
-            ERROR(LOG_SCREEN | LOG_FILE,"The update database is failed");
-            ret = -1;
-        END_TRY;
-        Connection_close(con);
-    }else{
-        db_delete_sms_by_id(id);
-    }
-    return (int) ret;
-}
-
-int db_select_sms_count(db_status status, int *count_out){
+int db_select_sm_count(int *count_out){
     int ret = -1;
     if(count_out){
         Connection_T con   = ConnectionPool_getConnection(pool);
         ResultSet_T result = NULL;
         TRY
-            result = Connection_executeQuery(con, query_count_sms, (int)status);
+            result = Connection_executeQuery(con, query_count_sm);
             if(ResultSet_next(result)){
-                *count_out = ResultSet_getIntByName(result, "count_sms");
+                *count_out = ResultSet_getIntByName(result, "count_sm");
             }else{
                 WARNING(LOG_SCREEN | LOG_FILE, "The return select database is empty");
                 *count_out = 0;
@@ -186,40 +157,59 @@ int db_select_sms_count(db_status status, int *count_out){
     return (int) ret;
 }
 
-long long int db_select_sms_get(unsigned char *interface, unsigned char *ip_origin, unsigned int port_origin, unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status, int *ttl){
+int db_select_sm_get_by_id(long long int id, unsigned char **call_id, unsigned int *sequence_number, unsigned char **interface, unsigned char **ip_origin, unsigned int *port_origin, unsigned char **msisdn_src, unsigned char **msisdn_dst, unsigned char **msg){
     int ret = 0;
     Connection_T con   = ConnectionPool_getConnection(pool);
     ResultSet_T result = NULL;
     TRY
         //SELECT src, dst, msg, interface, ip_origin, port_origin
-        result = Connection_executeQuery(con, query_get_sms_by_status, (int)status);
+        result = Connection_executeQuery(con, query_get_sm_by_id, id);
         if(ResultSet_next(result)){
             const char *const_tmp = NULL;
-            ret         = ResultSet_getIntByName(result, "id");
 
-            *ttl        = ResultSet_getIntByName(result, "ttl");
+            if(call_id){
+                const_tmp   = ResultSet_getStringByName(result, "call_id");
+                *call_id  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*call_id, (char*)const_tmp);
+            }
 
-            const_tmp   = ResultSet_getStringByName(result, "interface");
-            interface   = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
-            strcpy((char*)interface, (char*)const_tmp);
+            if(sequence_number){
+                *sequence_number  = ResultSet_getIntByName(result, "sequence_number"); 
+            }
 
-            const_tmp   = ResultSet_getStringByName(result, "ip_origin");
-            ip_origin   = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
-            strcpy((char*)ip_origin, (char*)const_tmp);
+            if(interface){
+                const_tmp   = ResultSet_getStringByName(result, "interface");
+                *interface  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*interface, (char*)const_tmp);
+            }
 
-            port_origin = ResultSet_getIntByName(result, "port_origin");
+            if(ip_origin){
+                const_tmp   = ResultSet_getStringByName(result, "ip_origin");
+                *ip_origin  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*ip_origin, (char*)const_tmp);
+            }
 
-            const_tmp   = ResultSet_getStringByName(result, "src");
-            msisdn_src  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
-            strcpy((char*)msisdn_src, (char*)const_tmp);
+            if(port_origin){
+                *port_origin = ResultSet_getIntByName(result, "port_origin");
+            }
 
-            const_tmp   = ResultSet_getStringByName(result, "dst");
-            msisdn_dst  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
-            strcpy((char*)msisdn_dst, (char*)const_tmp);
+            if(msisdn_src){
+                const_tmp   = ResultSet_getStringByName(result, "src");
+                *msisdn_src = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*msisdn_src, (char*)const_tmp);
+            }
 
-            const_tmp   = ResultSet_getStringByName(result, "msg");
-            msg         = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
-            strcpy((char*)msg, (char*)const_tmp);
+            if(msisdn_dst){
+                const_tmp   = ResultSet_getStringByName(result, "dst");
+                *msisdn_dst = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*msisdn_dst, (char*)const_tmp);
+            }
+
+            if(msg){
+                const_tmp   = ResultSet_getStringByName(result, "msg");
+                *msg        = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*msg, (char*)const_tmp);
+            }
         }else{
             WARNING(LOG_SCREEN | LOG_FILE, "The return select database is empty");
         }
@@ -231,103 +221,70 @@ long long int db_select_sms_get(unsigned char *interface, unsigned char *ip_orig
     return (int) ret;
 }
 
-/*
-int main(){
-    db_init();
-
-    long long int id = db_insert_sms("SIP_IN_01", "192.168.10.1", 5090, "0630566333", "0624901020", "Msg de test assez court", PENDING, 5);
-    printf("id = %lld", id);
-    id = db_insert_sms("SIP_IN_01", "192.168.10.1", 5090, "0630566333", "0624901020", "Msg de test2 assez court", PENDING, 5);
-    printf("id = %lld", id);
-
-    db_close();
-}
-*/
-/*
-static char *query_get_id_sms = {
-        "SELECT id FROM sms WHERE sms.src LIKE \"%s\" "
-        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" LIMIT 1"
-};
-
-static char *query_get_info_sms = {
-        "SELECT * FROM sms WHERE sms.src LIKE \"%s\" "
-        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" LIMIT 1"
-};
-
-static char *query_get_all_sms = {
-        "SELECT * FROM sms"
-};
-
-static char *query_get_all_sms_by_status_and_interface = {
-        "SELECT * FROM sms "
-        "WHERE interface=\"%s\" AND status=%d limit 1"
-};
-
-static char *query_get_sms_by_status = {
-        "SELECT * FROM sms WHERE status = %d LIMIT 1"
-};
-
-static char *query_get_all_sms_by_status = {
-        "SELECT * FROM sms WHERE status = %d"
-};
-
-static char *query_get_sms_by_id = {
-        "SELECT * FROM sms WHERE id = %d LIMIT 1"
-};
-
-static char *query_delete_sms = {
-        "DELETE FROM sms WHERE sms.src LIKE \"%s\" "
-        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" AND sms.status = %d LIMIT 1"
-};
-
-static char *query_update_ttl_sms = {
-        "UPDATE sms SET ttl=%d WHERE sms.src LIKE \"%s\" "
-        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" AND sms.status = %d LIMIT 1"
-};
-static char *query_update_status_sms = {
-        "UPDATE sms SET status=%d WHERE sms.src LIKE \"%s\" "
-        "AND sms.dst LIKE \"%s\" AND sms.msg LIKE \"%s\" AND sms.status = %d LIMIT 1"
-};
-*/
-
-/*
-int db_delete_sms(unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status){
-    int ret = 0;
-    Connection_T con = ConnectionPool_getConnection(pool);
+int db_select_sm_get_first(long long int *id, unsigned char *call_id, unsigned int *sequence_number, unsigned char **interface, unsigned char **ip_origin, unsigned int *port_origin, unsigned char **msisdn_src, unsigned char **msisdn_dst, unsigned char **msg){
+    int ret = -1;
+    Connection_T con   = ConnectionPool_getConnection(pool);
+    ResultSet_T result = NULL;
     TRY
-        Connection_execute(con, query_delete_sms, msisdn_src, msisdn_dst, msg, (int)status);
+        //SELECT src, dst, msg, interface, ip_origin, port_origin
+        result = Connection_executeQuery(con, query_get_first_sm);
+        if(ResultSet_next(result)){
+            const char *const_tmp = NULL;
+            if(id){
+                *id         = ResultSet_getLLongByName(result, "id");
+            }
+
+            if(call_id){
+                const_tmp   = ResultSet_getStringByName(result, "call_id");
+                *call_id  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*call_id, (char*)const_tmp);
+            }
+
+            if(sequence_number){
+                *sequence_number  = ResultSet_getIntByName(result, "sequence_number"); 
+            }
+
+            if(interface){
+                const_tmp   = ResultSet_getStringByName(result, "interface");
+                *interface  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*interface, (char*)const_tmp);
+            }
+
+            if(ip_origin){
+                const_tmp   = ResultSet_getStringByName(result, "ip_origin");
+                *ip_origin  = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*ip_origin, (char*)const_tmp);
+            }
+
+            if(port_origin){
+                *port_origin = ResultSet_getIntByName(result, "port_origin");
+            }
+
+            if(msisdn_src){
+                const_tmp   = ResultSet_getStringByName(result, "src");
+                *msisdn_src = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*msisdn_src, (char*)const_tmp);
+            }
+
+            if(msisdn_dst){
+                const_tmp   = ResultSet_getStringByName(result, "dst");
+                *msisdn_dst = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*msisdn_dst, (char*)const_tmp);
+            }
+
+            if(msg){
+                const_tmp   = ResultSet_getStringByName(result, "msg");
+                *msg        = (unsigned char*)calloc(strlen((char*)const_tmp), sizeof(char));
+                strcpy((char*)*msg, (char*)const_tmp);
+            }
+        }else{
+            WARNING(LOG_SCREEN | LOG_FILE, "The return select database is empty");
+        }
     CATCH(SQLException)
-        ERROR(LOG_SCREEN | LOG_FILE,"The delete database is failed");
+        ERROR(LOG_SCREEN | LOG_FILE, "The select database is failed");
         ret = -1;
     END_TRY;
     Connection_close(con);
     return (int) ret;
 }
 
-int db_update_sms_status(unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status old_status, db_status new_status){
-    int ret = 0;
-    Connection_T con = ConnectionPool_getConnection(pool);
-    TRY
-        Connection_execute(con, query_update_status_sms, (int)new_status, msisdn_src, msisdn_dst, msg, (int)old_status);
-    CATCH(SQLException)
-        ERROR(LOG_SCREEN | LOG_FILE,"The update database is failed");
-        ret = -1;
-    END_TRY;
-    Connection_close(con);
-    return (int) ret;
-}
-
-int db_update_sms_ttl(unsigned char *msisdn_src, unsigned char *msisdn_dst, unsigned char *msg, db_status status, int new_ttl){
-    int ret = 0;
-    Connection_T con = ConnectionPool_getConnection(pool);
-    TRY
-        Connection_execute(con, query_update_ttl_sms, (int)new_ttl, msisdn_src, msisdn_dst, msg, (int)status);
-    CATCH(SQLException)
-        ERROR(LOG_SCREEN | LOG_FILE,"The update database is failed");
-        ret = -1;
-    END_TRY;
-    Connection_close(con);
-    return (int) ret;
-}
-
-*/
