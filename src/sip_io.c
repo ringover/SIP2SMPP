@@ -1,91 +1,69 @@
 /**
-* In this file, all SIP function are regrouped.
-*/
+ * In this file, all SIP function are regrouped.
+ */
 #include "sip_io.h"
 
-map *map_str_sip  = NULL;
+#ifndef _strcpy
+#define _strcpy(dst, src) \
+    dst = (char*)calloc(strlen((char*)src)+1, sizeof(char)); \
+    strcpy(dst, src)
+#endif /*_strcpy*/
+
+#ifndef _strncpy
+#define _strncpy(dst, src, size) \
+    dst = (char*)calloc(size+1, sizeof(char)); \
+    strncpy(dst, src, size)
+#endif /*_strncpy*/
+
+map *map_session_sip; //<str(call_id), sip_data_t>
+map *map_iface_sip;   //<str(name_interface), smpp_socket_t>
 
 /**
-*  \brief This function create a sip_socket structure
-*/
-sip_socket* new_sip_socket(unsigned char *interface_name, unsigned char *ip_host, unsigned int port_host){
-    sip_socket *p_sip_socket = NULL;
-    p_sip_socket = (sip_socket*)calloc(1, sizeof(sip_socket));
-
-    p_sip_socket->interface_name = calloc(strlen((char*)interface_name)+1, sizeof(uint8_t));
-    strcpy((char*)p_sip_socket->interface_name, (char*)interface_name);
-
-    p_sip_socket->sock = (socket_t*)calloc(1, sizeof(socket_t));
-
-    p_sip_socket->ip_host = calloc(strlen((char*)ip_host)+1, sizeof(uint8_t));
-    strcpy((char*)p_sip_socket->ip_host, (char*)ip_host);
-
-    p_sip_socket->port_host = port_host;
-
-    p_sip_socket->status = SIP_DISCONNECT;
-
-    return (sip_socket*)p_sip_socket;
-}
-
-void sip_socket_free(sip_socket **p_sip_socket){
-    if(p_sip_socket && *p_sip_socket){
-        if((*p_sip_socket)->ip_host){
-            free((*p_sip_socket)->ip_host);
-        }
-        if((*p_sip_socket)->sock){
-            //TODO : close + free
-        }
-        free(*p_sip_socket);
-        *p_sip_socket = NULL;
-    }
-    return;
-}
-
-/**
- * Used for MAP and LIST
+ *  \brief This function create a sip_socket structure
  */
-
-void free_sip_socket(void **p_p_data){
-    //sip_socket_free((sip_socket**)p_p_data);
+inline void init_sip_socket_t(sip_socket_t *p_sip_socket, unsigned char *interface_name, unsigned char *ip_host, unsigned int port_host){
+    if(p_sip_socket){
+        if(interface_name){
+            _strcpy(p_sip_socket->interface_name, interface_name);
+        }
+        if(p_sip_socket->sock == NULL){
+            p_sip_socket->sock = new_socket_t();
+        }
+        if(ip_host){
+            _strcpy(p_sip_socket->sock->ip, ip_host);
+        }
+        if(port_host > 0){
+            p_sip_socket->sock->port = port_host;
+        }
+    }
     return;
 }
 
-void* copy_sip_socket(const void *p_data){
-    /* Not used*/ 
-    return NULL;
-}
-
-int compare_sip_socket(const void *p_data1, const void *p_data2){
-    int res = 0;
-    sip_socket *p_sip_sock1 = p_data1;
-    sip_socket *p_sip_sock2 = p_data2;
-    if(strcmp((char*)p_sip_sock1->interface_name, (char*)p_sip_sock2->interface_name) != 0){
-        res = -1;
+inline void free_sip_socket(void **p_p_data){
+    if(p_p_data && *p_p_data){
+        sip_socket_t *p_sip_socket = (sip_socket_t*)*p_p_data;
+        if(p_sip_socket->interface_name){
+            free(p_sip_socket->interface_name);
+        }
+        if(p_sip_socket->sock->ip){
+            free(p_sip_socket->sock->ip);
+        }
+        if(p_sip_socket->sock){
+            udp_close(p_sip_socket->sock->socket);
+            free(p_sip_socket->sock);
+        }
+        free(p_sip_socket);
+        *p_p_data = NULL;
     }
-/*
-    if(p_sip_sock1->status != p_sip_sock2->status){
-        res = -1
-    }
-    if(strcmp((char*)p_sip_sock1->ip_host, (char*) p_sip_sock2->ip_host) != 0){
-        res = -1
-    }
-    if(p_sip_sock1->port != p_sip_sock2->port){
-        res = -1
-    }
-    if(p_sip_sock1-> == p_sip_sock2->){
-        res = -1
-    }
-*/
-    return (int) res;
+    return;
 }
 
 /**
 *  \brief This function is used for connect the sip socket
 */
-int sip_start_connection(sip_socket *p_sip_socket){
-    if(p_sip_socket != NULL && p_sip_socket->status == SIP_DISCONNECT){
-        int ret = udp_socket(p_sip_socket->sock, p_sip_socket->ip_host, p_sip_socket->port_host);
-        p_sip_socket->status = SIP_CONNECT;
+int sip_start_connection(sip_socket_t *p_sip_socket){
+    if(p_sip_socket != NULL){
+        int ret = udp_socket(p_sip_socket->sock, p_sip_socket->sock->ip, p_sip_socket->sock->port);
         return (int) ret;
     }
     return (int) -1;
@@ -94,10 +72,9 @@ int sip_start_connection(sip_socket *p_sip_socket){
 /**
 *  \brief This function is used for disconnect the sip socket
 */
-int sip_end_connection(sip_socket *p_sip_socket){
-    if(p_sip_socket && p_sip_socket->status == SIP_CONNECT){
+int sip_end_connection(sip_socket_t *p_sip_socket){
+    if(p_sip_socket){
         int ret = udp_close(p_sip_socket->sock);
-        p_sip_socket->status = SIP_DISCONNECT;
         return (int) ret;
     }
     return (int) -1;
@@ -106,157 +83,191 @@ int sip_end_connection(sip_socket *p_sip_socket){
 /**
 *  \brief This function is used for restart the sip socket
 */
-int sip_restart_connection(sip_socket *p_sip_socket){
+int sip_restart_connection(sip_socket_t *p_sip_socket){
     sip_end_connection(p_sip_socket);
     return (int) sip_start_connection(p_sip_socket);
 }
 
-/**
-*  \brief This function allow to send a SIP trame
-*/
-int sip_send_message(sip_socket *p_sip_socket, unsigned char *buffer, unsigned char *ip_remote, unsigned int port_remote){
-    if(p_sip_socket && p_sip_socket->sock){
-        return do_udp_send(p_sip_socket->sock, buffer, (size_t)strlen((char*)buffer), ip_remote, port_remote);
+///////////////////////
+// RECV
+/////
+
+static int sip_recv_processing_request(socket_t *sock, sip_message_t *p_sip, char *interface, char *ip_origin, unsigned int port_origin){
+    //SIP MESSAGE (SM)
+    //go routing + save session (with call_id_number)
+    char *k_call_id = NULL;
+    sip_session_t *p_session = new_smpp_session_t();
+    sm_data_t *p_sm = new_sm_data_t();
+    //sm struct + insert db
+    init_sm_data_t(p_sm, sock, 0, I_SIP, ip_origin, port_origin, p_sip, p_sip->from.username, p_sip->to.username, p_sip->message);
+    p_sm->id = db_insert_sm(p_sip->call_id.number, 0, interface, ip_origin, port_origin, p_sm->src, p_sm->dst, p_sm->msg);
+    //Key p_session
+    _strcpy(k_call_id, p_sip->call_id.number);
+    //Value p_session
+    p_session->p_msg_sip = p_sip;
+    p_session->p_sm = p_sm;
+    //Set in map
+    map_set(map_session_sip, k_call_id, p_session);
+    //routing
+    if(routing(interface, ip_origin, port_origin, p_sm) == -1){
+        //send resp error
+        ERROR(LOG_SCREEN | LOG_FILE, "Routing return -1 -> destroy SM/Session SMPP and sent error")
+        p_sip->status_code = 401;
+        _strcpy(p_sip->reason_phrase, UNAUTHORIZED_STR);
+        sip_send_response(sock, ip_origin, port_origin, p_sip);
+        //SMS DESTROY
+        //map_erase(map_session_sip, k_call_id);
+        free_sm_data(&p_sm);
+    }
+    return (int) -1;
+}
+
+static int sip_recv_processing_response(sip_message_t *p_sip){
+    //200 OK || 202 ACCEPTED
+    sip_session_t *p_session = (sip_session_t*)map_get(map_session_sip, p_sip->call_id.number);
+    if(p_session){
+        switch(p_session->p_sm->type){
+            case I_SIP :
+            {   sip_message_t *p_sip_origin = (sip_message_t*)p_session->p_sm->p_msg_origin;
+                p_sip_origin->status_code = OK;
+                _strcpy(p_sip_origin->reason_phrase, OK_STR);
+                sip_send_response(p_session->p_sm->sock, p_session->p_sm->ip_origin, p_session->p_sm->port_origin, p_sip_origin);
+                map_erase(map_session_sip, p_sip_origin->call_id.number);
+                //free_sip_message(p_sip_origin);
+            }   break;
+            case I_SMPP :
+            {   generic_nack_t *p_smpp = (generic_nack_t*)p_session->p_sm->p_msg_origin;
+                smpp_send_response(p_session->p_sm->sock, p_smpp->command_id & GENERIC_NACK, ESME_ROK, &p_smpp->sequence_number);
+                map_erase(map_session_smpp, &p_smpp->sequence_number);
+                //free(p_smpp);
+            }   break;
+            case I_SIGTRAN :
+                //TODO
+                break;
+        }
+    }
+    db_delete_sm_by_id(p_session->p_sm->id);
+    free_sm_data(&p_session->p_sm);
+    map_erase(map_session_sip, p_sip->call_id.number);
+    free_sip_message(&p_sip);
+    return (int) -1;
+}
+
+static void* sip_recv_processing(void *data){
+    void         **all_data    = (void**)data;
+    sip_message_t *p_sip_msg   = (sip_message_t*)all_data[0];
+    sip_socket_t  *p_sip_sock  = (sip_socket_t*)all_data[1];
+    char          *interface   = (char*)all_data[2];
+    char          *ip_origin   = (char*)all_data[3];
+    unsigned int  port_origin = (unsigned int)*(all_data+4);
+    if(p_sip_msg && ip_origin && port_origin && MSG_IS_MESSAGE(p_sip_msg->method)){
+        sip_recv_processing_request(p_sip_sock->sock, p_sip_msg, interface, ip_origin, port_origin);
+    }else if(p_sip_msg && (p_sip_msg->status_code == 200 || p_sip_msg->status_code == 202)){
+        sip_recv_processing_response(p_sip_msg);
+        goto free_origin_param;
+    }else if(p_sip_msg && sip_what_is_the_method(p_sip_msg->method) != -1){
+        //send 405
+        p_sip_msg->status_code = 405;
+        _strcpy(p_sip_msg->reason_phrase, METHOD_NOT_ALLOWED_STR);
+        sip_send_response(p_sip_sock->sock, ip_origin, port_origin, p_sip_msg);
+        //free all param
+        goto free_all_param;
     }else{
-        ERROR(LOG_SCREEN, "Sent sip message faield")
+        //not action
+        ERROR(LOG_SCREEN, "SIP status code %d not implemented", p_sip_msg->status_code)
+        goto free_all_param;
     }
-    return (int) -1;
-}
-
-/**
-*  \brief This function allow to receive a SIP trame.
-*/
-int sip_receive_message(sip_socket *p_sip_socket, unsigned char **buffer, unsigned int *buffer_len, unsigned char **ip_remote, unsigned int *port_remote){
-    if(p_sip_socket && buffer){
-        int ret = 0;
-        struct sockaddr_in from = { 0 };
-        ret = do_udp_receive(p_sip_socket->sock, buffer, buffer_len, &from);
-        *port_remote = ntohs(from.sin_port);
-        //ip_remote = (unsigned char*)calloc(20, sizeof(char));
-        *ip_remote = inet_ntoa(from.sin_addr);
-        return (int) ret;
-    }
-    return (int) -1;
-}
-
-/**
- * Get message on SIP Message
- */
-int _get_content(unsigned char *buffer_in, unsigned char **buffer_out){
-    char *p_str = buffer_in;
-    char *s_str = NULL;
-    while((s_str = strstr(p_str, "\r\n")) != NULL){
-        p_str = (s_str + strlen((char*)"\r\n"));
-    }
-    if(p_str){
-        int len = strlen((char*)p_str);
-        *buffer_out = (unsigned char*)calloc(len, sizeof(char));
-        strncpy((char*)*buffer_out, (char*)p_str, len);
-        return (int) len;
-    }
-    return (int) -1;
-} 
-
-void break_test(){
-	return 0;
-}
-
-
-/**
- * Send/Receive SMS
- */
-int sip_receive_sms(sip_socket *p_sip_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **msg){
-    if(p_sip_socket){
-        unsigned char *buffer     = NULL;
-        unsigned char *buffer_resp= NULL;
-        unsigned int  buffer_len  = 0;
-        unsigned int  port_remote = 0;
-        unsigned char *ip_remote  = NULL;
-        osip_message_t *message   = NULL;
-        osip_call_id_t *call_id   = NULL;
-        osip_t *osip = NULL;
-        int ret = 0;
-        osip_init(&osip);
-
-        if((ret = sip_receive_message(p_sip_socket, &buffer, &buffer_len, &ip_remote, &port_remote)) <= 0){
-            ERROR(LOG_SCREEN, "SIP receive failed");
-            return (int) -1;
-        }
- 
-        if(osip_message_init(&message) != 0){
-            ERROR(LOG_FILE | LOG_SCREEN, "Cannot init parse osip")
-            return (int) -1;
-        }
+    return (void*) NULL;
         
-        if(osip_message_parse(message, buffer, strlen(buffer)) != 0){
-            osip_message_free(message);
-            ERROR(LOG_FILE | LOG_SCREEN, "Cannot parse message sip")
-            return (int) -1;
-        }
-        
-        if(MSG_IS_MESSAGE(message)){
-            if(message->from && message->from->url && message->from->url->username){
-                *from_msisdn = (unsigned char*)calloc(strlen(message->from->url->username), sizeof(char));
-                strcpy((char*)*from_msisdn, (char*)message->from->url->username);
-            }
-            if(message->to && message->to->url && message->to->url->username){
-                *to_msisdn = (unsigned char*)calloc(strlen(message->to->url->username), sizeof(char));
-                strcpy((char*)*to_msisdn, (char*)message->to->url->username);
-            }
-            if(_get_content(buffer, msg) <= 0){
-                WARNING(LOG_SCREEN, "Message empty");
-            }
-            //Sent 200 OK
-            if(create_trame_sip_200_ok(&buffer_resp, p_sip_socket->ip_host, p_sip_socket->port_host, ip_remote, port_remote, *from_msisdn, *to_msisdn, message->call_id->number) == 0){
-                DEBUG(LOG_SCREEN, "Sent 200 OK");
-                sip_send_message(p_sip_socket, buffer_resp, ip_remote, port_remote);
-            }
-        }else if(MSG_TEST_CODE(message,202) || MSG_TEST_CODE(message,200)){
-            //clean DB with helping of call_id => message->call_id;
-            WARNING(LOG_SCREEN, "TODO sip method %s", message->sip_method);
-        }else{
-            if(create_trame_sip_405_method_not_allowed(&buffer_resp, p_sip_socket->ip_host, p_sip_socket->port_host, ip_remote, port_remote, message->from->url->username, message->to->url->username, message->call_id->number) == 0){
-                DEBUG(LOG_SCREEN, "Sent 405 Method Not Allowed")
-                sip_send_message(p_sip_socket, buffer_resp, ip_remote, port_remote);
-            }
-        }
-        
-        if(buffer_resp){
-            free(buffer_resp);
-        }
-        if(buffer){
-            free(buffer);
-        }
-        osip_message_free(message);
-        osip_free(osip);
-        return (int) 0;
+free_all_param:
+    if(p_sip_msg){
+        free_sip_message(&p_sip_msg);
+    }
+free_origin_param:
+    if(ip_origin){
+        free(ip_origin);
+    }
+    if(port_origin){
+        free(port_origin);
+    }
+    return (void*) NULL;
+}
+
+
+int sip_engine(sip_socket_t *p_sip_sock){
+    int   ret   = -1;
+    void **data = NULL;
+    void *data_sip    = NULL;
+    void *ip_remote   = NULL;
+    unsigned int port_remote = 0;
+
+    if((ret = sip_scan_sock(p_sip_sock->sock, (sip_message_t**)&data_sip, &ip_remote, &port_remote)) != -1){
+        data = (void**)calloc(6, sizeof(void*));
+        data[0] = data_sip;
+        data[1] = p_sip_sock;
+        data[2] = p_sip_sock->interface_name;
+        data[3] = ip_remote;
+        data[4] = calloc(1, sizeof(unsigned int));
+        *(data+4) = port_remote;
+        threadpool_add(p_threadpool, sip_recv_processing, data, 0);
+    }
+    return (int) ret;
+}
+
+
+///////////////////////
+// SEND
+/////
+
+int send_sms_to_sip(unsigned char *interface_name, sm_data_t *p_sm, unsigned char *ip_remote, unsigned int port_remote){
+    sip_socket_t  *p_sock = map_get(map_iface_sip, interface_name);
+    if(p_sock && ip_remote && port_remote > 0 && p_sm){
+        char *k_session = NULL;
+        sip_session_t *v_session = new_sip_session_t();
+        //create SIP MESSAGE message
+        sip_message_t *p_sip = new_sip_message_t();
+        init_sip_message_t(p_sip, SIP_VERSION, MESSAGE_STR, 0, NULL, TEXT_PLAIN_STR, strlen(p_sm->msg), p_sm->msg);
+        init_sip_ruri_t(&p_sip->ruri, "sip", p_sm->dst, ip_remote, port_remote);
+        init_sip_from_t(&p_sip->from, "sip", p_sm->src, p_sock->sock->ip, p_sock->sock->port, NULL);
+        init_sip_to_t(&p_sip->to, "sip",   p_sm->dst, ip_remote, port_remote, NULL);
+        generate_call_id(&k_session);
+        init_sip_call_id_t(&p_sip->call_id, k_session, p_sock->sock->ip);
+        init_sip_cseq_t(&p_sip->cseq, (unsigned int)rand()%8000+1, MESSAGE_STR);
+        //save session
+        v_session->p_msg_sip = p_sip;
+        v_session->p_sm = p_sm; 
+        map_set(map_session_sip, k_session, v_session); 
+        //send msg
+        return (int) sip_send_request(p_sock->sock, ip_remote, port_remote, p_sip);
     }
     return (int) -1;
 }
 
-int send_sms_to_sip(unsigned char *interface_name, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *message, unsigned char *ip_remote, unsigned int port_remote){
-    char *buffer = NULL;
-    sip_socket *p_sock = map_get(map_str_sip, interface_name);
-    if(create_trame_sip_message(&buffer, p_sock->ip_host, p_sock->port_host, ip_remote, port_remote, from_msisdn, to_msisdn, message) == 0){
-        return sip_send_message(p_sock, buffer, ip_remote, port_remote);
-    }else{
-        ERROR(LOG_SCREEN | LOG_FILE, "Create trame sip message is failed")
+///////////////////////
+// sip_data_t
+/////
+
+void init_sip_session(sip_session_t **p_p_sip, sip_message_t *p_msg_sip, void *p_sm){
+    if(p_p_sip){
+        sip_session_t *p_sip = NULL;
+        if(*p_p_sip == NULL){
+            *p_p_sip = new_sip_session_t();
+        }
+        p_sip = *p_p_sip;
+        p_sip->p_msg_sip = p_msg_sip;
+        p_sip->p_sm = p_sm;
     }
-    if(buffer){
-        free(buffer);
+    return;
+}
+
+void free_sip_session(void **data){
+    if(data && *data){
+        sip_session_t *p_sip = (sip_session_t*)*data;
+        free_sip_message(&p_sip->p_msg_sip);
+        //p_sm is free but not here
+        free(*data);
+        *data = NULL;
     }
-    return (int) -1;
+    return;
 }
 
-int send_sms_to_sip_interface(unsigned char *interface_name_src, unsigned char *from_msisdn, unsigned char *to_msisdn, unsigned char *message, unsigned char *interface_name_dst){
-    return (int) 0;
-}
-
-/**
- * TODO: Voir pour la gestion des messages SIP (200, 202, 500, ...)
-
-int sip_send_200(sip_socket *p_sip_socket, unsigned char **from_msisdn, unsigned char **to_msisdn, unsigned char **message, unsigned char *ip_remote, unsigned char *port_remote){
-    return (int) 0;
-}
-
- */

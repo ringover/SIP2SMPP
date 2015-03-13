@@ -78,8 +78,8 @@ char *tab_sip_header[] = {
 inline int sip_receive(socket_t *sock, char *buffer, size_t buffer_len, char **remote_ip, unsigned int *remote_port){
     int ret = -1;
     if(sock && buffer && buffer_len > 0){
-        sockaddr_in from = { 0 };
-        if((ret = do_tcp_receive(sock, buffer, buffer_len, &from)) > 0){
+        struct sockaddr_in from = { 0 };
+        if((ret = do_udp_receive(sock, buffer, buffer_len, &from)) > 0){
             if(remote_ip){
                 *remote_ip = inet_ntoa(from.sin_addr);
             }
@@ -94,25 +94,30 @@ inline int sip_receive(socket_t *sock, char *buffer, size_t buffer_len, char **r
     return (int) ret;
 }
 
-int sip_scan_sock(socket_t *sock, sip_message_t *p_sip, char **remote_ip, unsigned int *remote_port){
+int sip_scan_sock(socket_t *sock, sip_message_t **p_sip, char **remote_ip, unsigned int *remote_port){
     char buffer[2048] = { 0 };
     size_t buffer_len = sizeof(buffer);
-
-    if(sip_receive(sock, buffer, buffer_len, remote_ip, remote_port) <= 0){
-        return (int) -1;
+    if(p_sip && remote_ip && remote_port){
+        if(*p_sip == NULL){
+            *p_sip = calloc(1, sizeof(sip_message_t));
+        }
+        if(sip_receive(sock, buffer, buffer_len, remote_ip, remote_port) <= 0){
+            return (int) -1;
+        }
+        return (int) sip_parser_message(*p_sip, buffer);
     }
-    return (int) sip_parser_message(p_sip, buffer);
+    return (int) -1;
 }
 
 //////////////////////////
 // Send SIP
 //////
 
-int sip_send_request(socket_t *sock, sip_message_t *p_sip){
+int sip_send_request(socket_t *sock, char* ip_remote, unsigned int port_remote, sip_message_t *p_sip){
     char *buffer = NULL;
     int ret = -1;
     if((ret = sip_message_to_string(p_sip, &buffer, true)) != -1){
-        ret = do_tcp_send(sock, buffer, strlen((char*)buffer), 0);
+        ret = do_tcp_send(sock, buffer, strlen((char*)buffer), ip_remote, port_remote);
         if(buffer){
             free(buffer);
         }
@@ -120,11 +125,11 @@ int sip_send_request(socket_t *sock, sip_message_t *p_sip){
     return (int) ret;
 }
 
-int sip_send_response(socket_t *sock, sip_message_t *p_sip){
+int sip_send_response(socket_t *sock, char* ip_remote, unsigned int port_remote, sip_message_t *p_sip){
     char *buffer = NULL;
     int ret = -1;
     if((ret = sip_message_to_string(p_sip, &buffer, false)) != -1){
-        ret = do_tcp_send(sock, buffer, strlen((char*)buffer), 0);
+        ret = do_tcp_send(sock, buffer, strlen((char*)buffer), ip_remote, port_remote);
         if(buffer){
             free(buffer);
         }

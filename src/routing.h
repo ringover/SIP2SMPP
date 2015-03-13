@@ -7,14 +7,17 @@
 #include <stdint.h>
 #include <sys/time.h>
 
-#include "sms_struct.h"
+#include "sip_io.h"
+#include "smpp_io.h"
+
 #include "log/log.h"
 #include "type_projet.h"
 #include "ini/iniFile.h"
+#include "sm_struct.h"
 
 int start_routing();
 
-int routing(const unsigned char *profile_name, const unsigned char *origin_ip, const unsigned int *origin_port, const unsigned char *msisdn_src, const unsigned char *msisdn_dst, const unsigned char *message);
+int routing(const unsigned char *interface_name, const unsigned char *origin_ip, const unsigned int *origin_port, sm_data_t *p_sm);
 
 int close_routing();
 

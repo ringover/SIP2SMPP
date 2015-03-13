@@ -30,20 +30,20 @@ int start_routing(){
     return 0;
 }
 
-int routing(const unsigned char *interface_name, const unsigned char *origin_ip, const unsigned int *origin_port, const unsigned char *msisdn_src, const unsigned char *msisdn_dst, const unsigned char *message){
+int routing(const unsigned char *interface_name, const unsigned char *origin_ip, const unsigned int *origin_port, sm_data_t *p_sm){
     Connection_T con = NULL;
     int res = -1;
-    DEBUG(LOG_SCREEN, "from = %s - to = %s - msg = %s", msisdn_src, msisdn_dst, message)
+    DEBUG(LOG_SCREEN, "from = %s - to = %s - msg = %s", p_sm->src, p_sm->dst, p_sm->msg)
     if(strcmp(interface_name, I_CONNECTION_SMPP) == 0){
         //send to SIP interface
-	char *r_user = NULL;
-	char *r_ip   = NULL;
-	int   r_port = NULL;
+        char *r_user = NULL;
+        char *r_ip   = NULL;
+        unsigned int   r_port = NULL;
         //Get routing
         TRY
             con = ConnectionPool_getConnection(mysql_pool);
-            ResultSet_T result = Connection_executeQuery(con, "SELECT dest FROM routes WHERE number = '%s' LIMIT 1", msisdn_dst);
-            DEBUG(LOG_SCREEN, "SELECT dest FROM routes WHERE number = '%s' LIMIT 1", msisdn_dst)
+            ResultSet_T result = Connection_executeQuery(con, "SELECT dest FROM routes WHERE number = '%s' LIMIT 1", p_sm->dst);
+            DEBUG(LOG_SCREEN, "SELECT dest FROM routes WHERE number = '%s' LIMIT 1", p_sm->dst)
     	    if(ResultSet_next(result)){
                 const char *const_tmp = ResultSet_getStringByName(result, "dest");
                 char *pos_a = NULL;
@@ -83,24 +83,27 @@ int routing(const unsigned char *interface_name, const unsigned char *origin_ip,
         Connection_close(con);
         //Send sip message
 
-        DEBUG(LOG_SCREEN, "%d Routing to %s@%s:%d", msisdn_dst, r_user, r_ip, r_port)
-
-        res = send_sms_to_sip(I_LISTEN_SIP, msisdn_src, r_user, message, r_ip, r_port);
+        DEBUG(LOG_SCREEN, "%d Routing to %s@%s:%d", p_sm->dst, r_user, r_ip, r_port)
+        
+        free(p_sm->dst); p_sm->dst = r_user;
+        //res = send_sms_to_sip(I_LISTEN_SIP, p_sm->src, r_user, p_sm->message, r_ip, r_port);
+        res = send_sms_to_sip(I_LISTEN_SIP, p_sm, r_ip, r_port);
+        free(r_ip);
         //Set LOG
         TRY
             con = ConnectionPool_getConnection(mysql_pool);
-            Connection_execute(con, "INSERT INTO logs_sms (user_from, user_to, server_from, server_to) VALUES ('%s', '%s', '%s', '%s')", msisdn_src, r_user, origin_ip, r_ip);
+            Connection_execute(con, "INSERT INTO logs_sms (user_from, user_to, server_from, server_to) VALUES ('%s', '%s', '%s', '%s')", p_sm->src, r_user, origin_ip, r_ip);
         CATCH(SQLException)
             ERROR(LOG_SCREEN | LOG_FILE, "LOG SMS Failed");
         END_TRY;
         Connection_close(con);
     }else if(strcmp(interface_name, I_LISTEN_SIP) == 0){
         //send to SMPP interface
-        res = send_sms_to_smpp(I_CONNECTION_SMPP, msisdn_src, msisdn_dst, message);
+        res = send_sms_to_client_smpp(I_CONNECTION_SMPP, p_sm);
         //Set LOG
         TRY
             con = ConnectionPool_getConnection(mysql_pool);
-            Connection_execute(con, "INSERT INTO logs_sms (user_from, user_to, server_from, server_to) VALUES ('%s', '%s', '%s', '%s')", msisdn_src, msisdn_dst, origin_ip, "81.201.82.10:2777" );
+            Connection_execute(con, "INSERT INTO logs_sms (user_from, user_to, server_from, server_to) VALUES ('%s', '%s', '%s', '%s')", p_sm->src, p_sm->dst, origin_ip, "81.201.82.10:2777" );
         CATCH(SQLException)
             ERROR(LOG_SCREEN | LOG_FILE, "LOG SMS Failed");
         END_TRY;
@@ -113,4 +116,4 @@ int close_routing(){
     ConnectionPool_free(&mysql_pool);
     return 0;
 }
-/// END SCRIPT ROUTING SAMPLE
+

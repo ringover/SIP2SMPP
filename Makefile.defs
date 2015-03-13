@@ -8,8 +8,8 @@ LD = $(CC)
 
 #LDFLAGS = -Wall -pedantic -g -O3
 LDFLAGS = -Wall -pedantic -g 
-ARFLAGS = -lsmpp34 -pthread -lzdb  -lrt -losip2 
-#ARFLAGS =  -pthread -ldbi  -lrt 
+ARFLAGS = -pthread -lzdb  -lrt  
+#ARFLAGS = -lsmpp34 -pthread -lzdb  -lrt -losip2 
 CFLAGS = $(LDFLAGS)
 #CXXFLASG = $(LDFLAGS) -std=c++11
 CXXFLASG = $(LDFLAGS)

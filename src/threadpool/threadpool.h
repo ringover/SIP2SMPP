@@ -36,6 +36,8 @@
 
 typedef struct threadpool_t threadpool_t;
 
+extern threadpool_t *p_threadpool;
+
 typedef enum {
     threadpool_invalid        = -1,
     threadpool_lock_failure   = -2,

@@ -26,8 +26,9 @@ int main(){
 	struct sockaddr_in sin = { 0 };
 	int sinsize = sizeof(sin);
 	memset(buffer, 0, 2048);
-	sock = new_smpp_socket("server_smpp", "192.168.1.100", 2777, "username", "123456", 3, "WWW", 1, 1, 1, 1);
-	do_smpp_bind_server(sock->sock, "192.168.1.100", 2780);
+  sock = new_smppçsocket_t();
+	init_smpp_socket(sock, "server_smpp", NULL, 0, "127.0.0.1", 2780, "test", "test", 3, "WWW", 1, 1, 1, 1);
+	do_smpp_bind_server(sock->sock, "127.0.0.1", 2780);
 	do_smpp_wait_client(sock->sock, &ip_remote, &port_remote, &type_bind);
 
 	while(i++ < 333){

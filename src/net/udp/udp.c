@@ -26,7 +26,7 @@ int do_udp_receive(socket_t *sock, unsigned char *buffer, size_t buffer_len, str
                 ret = -1;
             }
             
-            DEBUG(LOG_SCREEN, "Recv Buffer UDP[%d] : \n%s", ret, *buffer)
+            DEBUG(LOG_SCREEN, "Recv Buffer UDP[%d] : \n%s", ret, buffer)
             pthread_mutex_unlock(&sock->mutex);
         }
         return (int) ret;

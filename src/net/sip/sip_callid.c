@@ -8,7 +8,7 @@
 static unsigned long rand_number;
 static char buffer_callid[SIZE_RAND_NUM + SIZE_CALLID_S];
 
-int init_callid(char *ip_host){
+int init_call_id(char *ip_host){
     int rand_bits = sizeof(int)*8;
     int i = sizeof(long)*8 / rand_bits;
 
@@ -57,7 +57,7 @@ static inline int inc_hexchar(char* c){
   return 0;
 }
 
-int generate_callid(char **str_out){
+int generate_call_id(char **str_out){
     if(str_out){
         short i = SIZE_CALLID_P;
         while(i && !inc_hexchar(buffer_callid + i-- - 1));

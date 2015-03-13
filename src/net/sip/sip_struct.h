@@ -6,6 +6,7 @@
 // Struct define
 /////
 
+
 #include <stdlib.h>
 #include <stdbool.h>
 #include "sip_header.h"
@@ -22,61 +23,63 @@
 typedef struct sip_ruri_t {
     sip_uri_t
 } sip_ruri_t;
+#define new_sip_ruri_t()   (sip_ruri_t*)calloc(1,sizeof(sip_ruri_t));
+void init_sip_ruri_t(sip_ruri_t *p_ruri, char *scheme, char *username, char *host, unsigned int port);
 
 typedef struct sip_from_t {
     sip_uri_t
     char *tag;
 } sip_from_t;
+#define new_sip_from_t()   (sip_from_t*)calloc(1,sizeof(sip_from_t));
+void init_sip_from_t(sip_from_t *p_from, char *scheme, char *username, char *host, unsigned int port, char *tag);
 
 typedef struct sip_to_t{
     sip_uri_t
     char *tag;
 } sip_to_t;
+#define new_sip_to_t()   (sip_to_t*)calloc(1,sizeof(sip_to_t));
+void init_sip_to_t(sip_to_t *p_to, char *scheme, char *username, char *host, unsigned int port, char *tag);
 
-typedef struct sip_callid_t {
+typedef struct sip_call_id_t {
     char *number;
     char *host;
-} sip_callid_t;
+} sip_call_id_t;
+#define new_sip_call_id_t()   (sip_call_id_t*)calloc(1,sizeof(sip_call_id_t));
+void init_sip_call_id_t(sip_call_id_t *p_call_id, char *number, char *host);
 
 typedef struct sip_cseq_t {
-    char *method;
     unsigned int number;
+    char *method;
 } sip_cseq_t;
+#define new_sip_cseq_t()   (sip_cseq_t*)calloc(1,sizeof(sip_cseq_t));
+void init_sip_cseq_t(sip_cseq_t *p_cseq, unsigned int number, char *method);
 
 typedef struct sip_message_t {
     char          *version;
     //Request only
-    sip_ruri_t     uri;
+    sip_ruri_t     ruri;
     char          *method;
-    //answer only
+    //Response/Answer only
     int           status_code;
     char          *reason_phrase;
 
     sip_from_t    from;
     sip_to_t      to;
-    sip_callid_t  call_id;
+    sip_call_id_t  call_id;
     sip_cseq_t    cseq;    
     char          *content_type;
     int           content_length;
     char          *message;
 } sip_message_t;
+#define new_sip_message_t()   (sip_message_t*)calloc(1,sizeof(sip_message_t));
+void init_sip_message_t(sip_message_t *p_message, char *version, char *method, int status_code, char *reason_phrase, char *content_type, int content_length, char *message);
 
 /////////////////
-// TO STRING
-//////
-int sip_from_to_string(sip_from_t *p_from, char **p_buffer);
-int sip_to_to_string(sip_to_t *p_to, char **p_buffer);
-int sip_content_type_to_string(char *content_type, char **p_buffer);
-int sip_content_length_to_string(int content_length, char **p_buffer);
-int sip_cseq_to_string(sip_cseq_t *p_cseq, char **p_buffer);
-int sip_callid_to_string(sip_callid_t *p_callid, char **p_buffer);
+// Content_type
+/////
 
-int sip_message_to_string(sip_message_t *p_sip, char **p_buffer, bool request);
-#define sip_message_request_to_string(p_sip,p_buffer) \
-    sip_message_to_string(p_sip, p_buffer, true);
+#define TEXT_PLAIN_STR      "text/plain"
 
-#define sip_message_response_to_string(p_sip,p_buffer) \
-    sip_message_to_string(p_sip, p_buffer, false);
 
 /////////////////
 // DESTROY
@@ -84,7 +87,7 @@ int sip_message_to_string(sip_message_t *p_sip, char **p_buffer, bool request);
 void destroy_sip_ruri(sip_ruri_t *p_ruri);
 void destroy_sip_from(sip_from_t *p_from);
 void destroy_sip_to(sip_to_t *p_to);
-void destroy_sip_callid(sip_callid_t *p_callid);
+void destroy_sip_call_id(sip_call_id_t *p_call_id);
 void destroy_sip_cseq(sip_cseq_t *p_cseq);
 void destroy_sip_message(sip_message_t *p_sip);
 
@@ -94,7 +97,7 @@ void destroy_sip_message(sip_message_t *p_sip);
 void free_sip_ruri(sip_ruri_t **p_p_data);
 void free_sip_from(sip_from_t **p_p_data);
 void free_sip_to(sip_to_t **p_p_data);
-void free_sip_callid(sip_callid_t **p_p_data);
+void free_sip_call_id(sip_call_id_t **p_p_data);
 void free_sip_cseq(sip_cseq_t **p_p_data);
 void free_sip_message(sip_message_t **p_p_data);
  

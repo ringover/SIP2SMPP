@@ -163,17 +163,17 @@ int sip_parser_to(sip_to_t *p_to, char *buffer){
     return (int) 0;
 }
 
-int sip_parser_callid(sip_callid_t *p_callid, char *buffer){
+int sip_parser_call_id(sip_call_id_t *p_call_id, char *buffer){
     //Call-ID: asd88asd77a@1.2.3.4
     //Call-ID: asd88asd77a
-    if(p_callid && buffer && strncmp(buffer, CALL_ID_STR, strlen((char*)CALL_ID_STR)) == 0){
+    if(p_call_id && buffer && strncmp(buffer, CALL_ID_STR, strlen((char*)CALL_ID_STR)) == 0){
         char *start = strchr(buffer, ' ');
         char *at    = strchr(++start, '@');
         if(at){
-            _strncpy(p_callid->number, start, at-start);
-            _strncpy(p_callid->host, ++at, strlen((char*)at));
+            _strncpy(p_call_id->number, start, at-start);
+            _strncpy(p_call_id->host, ++at, strlen((char*)at));
         }else{
-            _strncpy(p_callid->number, start, strlen((char*)start));
+            _strncpy(p_call_id->number, start, strlen((char*)start));
         }
     }else{
         ERROR(LOG_SCREEN, "Call-ID Syntax error");
@@ -255,7 +255,7 @@ int sip_parser_first_line(sip_message_t *p_sip, char *buffer){
         //SIP RURI
         {   char *ruri = NULL;
             _strncpy(ruri,c2,c1-c2);
-            if(sip_parser_ruri(&(p_sip->uri), ruri) == -1){
+            if(sip_parser_ruri(&(p_sip->ruri), ruri) == -1){
                 return (int) -1;
             }
             free(ruri);
@@ -296,7 +296,7 @@ int sip_parser_message(sip_message_t *p_sip, char *buffer){
                         sip_parser_to(&p_sip->to, *(exp+i));
                         break;
                     case CALL_ID :
-                        sip_parser_callid(&p_sip->call_id, *(exp+i));
+                        sip_parser_call_id(&p_sip->call_id, *(exp+i));
                         break;
                     case CSEQ :
                         sip_parser_cseq(&p_sip->cseq, *(exp+i));

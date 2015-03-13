@@ -1,6 +1,19 @@
 
 #include "str.h"
 
+#ifndef _strcpy
+#define _strcpy(dst, src) \
+    dst = (char*)calloc(strlen((char*)src)+1, sizeof(char)); \
+    strcpy(dst, src)
+#endif /*_strcpy*/
+
+#ifndef _strncpy
+#define _strncpy(dst, src, size) \
+    dst = (char*)calloc(size+1, sizeof(char)); \
+    strncpy(dst, src, size)
+#endif /*_strncpy*/
+
+
 /**
  * Count the number of occurences to 'occurence' in input string 'str_in'
  */
@@ -93,4 +106,5 @@ void del_occurrence(char* str_in, int cpt, ...){
     }
     va_end(ap);
 }
+
 

@@ -16,19 +16,15 @@ extern "C"{
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#ifdef __linux__
-#include <stdint.h>
-#endif
-
 #include "./libsmpp34/smpp34.h"
 #include "./libsmpp34/smpp34_structs.h"
 #include "./libsmpp34/smpp34_params.h"
 
 #include "../net_struct.h"
+#include "../tcp/tcp.h"
 
 #include "../../log/log.h"
 
-#define RESP 0x80000000
 
 /////////////////////////////////////////
 ////                                /////
@@ -39,9 +35,9 @@ extern "C"{
 
 inline int smpp_receive(socket_t *sock, char *buffer, size_t buffer_len);
 
-inline int smpp_parser(char *buffer, int len, void *data);
+inline int smpp_parser(char *buffer, int len, void **data);
 
-int smpp_scan_sock(socket_t *sock, void *res);
+int smpp_scan_sock(socket_t *sock, void **data);
 
 /////////////////////////////////////////
 ////                                /////
@@ -49,6 +45,12 @@ int smpp_scan_sock(socket_t *sock, void *res);
 ////            SEND SMPP           /////
 ////                                /////
 /////////////////////////////////////////
+
+unsigned int get_sequence_number();
+
+inline int smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned int command_status, unsigned int *sequence_number);
+#define smpp_send_response(sock,command_id,command_status,sequence_number) \
+    smpp_send_generic(sock,command_id,command_status,sequence_number)
 
 int smpp_send_enquire_link(socket_t *sock, unsigned int *sequence_number);
 
@@ -64,7 +66,7 @@ int smpp_send_query_sm(socket_t *sock, unsigned int *sequence_number);
 
 int smpp_send_bind_server(socket_t *sock, char *ip_host, unsigned int port_host);
 
-int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote, int *bind);
+int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote);
 
 /**
  * SMPP BIND Client

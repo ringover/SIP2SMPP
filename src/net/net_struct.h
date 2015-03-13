@@ -14,12 +14,14 @@
 #include <linux/if_ether.h>
 #include <pthread.h>
 
-typedef struct _socket{
+typedef struct socket_t{
   int  socket;
-  //TODO : map with <ip:port,csocket>
-  int csocket; //With session (TCP-SCTP)
+  int csocket; //With session transport protocol (TCP-SCTP) for client connection
+  unsigned char *ip;
+  unsigned int   port;
   pthread_mutex_t mutex;
 } socket_t;
+#define new_socket_t()   (socket_t*)calloc(1, sizeof(socket_t))
 
 //void display_trame(char *buffer, size_t buffer_len);
 

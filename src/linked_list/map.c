@@ -89,17 +89,20 @@ map_error map_set(map *This, void *key, void *value){
 }
 
 map_error map_setByCopy(map *This, void *key, void *value){
-	map_error code;
-	void *k = This->_key_copy(key);
-	void *v = This->_value_copy(value);
+  if(This->_key_copy && This->_value_copy){
+    map_error code;
+    void *k = This->_key_copy(key);
+    void *v = This->_value_copy(value);
 
-	if((code = map_set(This,k,v)) != MAP_OK){
-		This->_value_free(&v);
-		This->_key_free(&k);
-		return code;
-	}
+    if((code = map_set(This,k,v)) != MAP_OK){
+      This->_value_free(&v);
+      This->_key_free(&k);
+      return code;
+    }
 
-	return (map_error)MAP_OK;
+    return (map_error)MAP_OK;
+  }
+  return (map_error)MAP_COPY_FUNC_NULL;
 }
 
 iterator_map* map_find(map *This, const void *key){

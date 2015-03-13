@@ -35,7 +35,8 @@ typedef enum _map_error{
 	MAP_KEY_EXIST,
 	MAP_KEY_NOT_EXIST,
 	MAP_VALUE_EXIST,
-	MAP_VALUE_NOT_EXIST
+	MAP_VALUE_NOT_EXIST,
+  MAP_COPY_FUNC_NULL
 } map_error;
 
 typedef struct _iterator_map{

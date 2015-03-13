@@ -1,5 +1,6 @@
 *~
 *.o
+*.old
 *.bak
 *.swp
 connectionSIP
@@ -10,3 +11,4 @@ Makefile.scan
 logFile
 core
 y.tab.c
+database.sql

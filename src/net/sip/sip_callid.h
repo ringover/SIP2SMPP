@@ -6,9 +6,9 @@
 #include <stdlib.h>
 #include <limits.h>
 
-int init_callid(char *ip_host);
+int init_call_id(char *ip_host);
 
-int generate_callid(char **str_out);
+int generate_call_id(char **str_out);
 
 #endif /*SIP_CALL_ID_H*/
 

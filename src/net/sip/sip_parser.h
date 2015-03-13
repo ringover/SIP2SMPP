@@ -26,7 +26,7 @@ int sip_msg_is_response(char *buffer);
 int sip_parser_ruri(sip_ruri_t *p_ruri, char *buffer);
 int sip_parser_from(sip_from_t *p_from, char *buffer);
 int sip_parser_to(sip_to_t *p_to, char *buffer);
-int sip_parser_callid(sip_callid_t *p_callid, char *buffer);
+int sip_parser_call_id(sip_call_id_t *p_call_id, char *buffer);
 int sip_parser_cseq(sip_cseq_t *p_cseq, char *buffer);
 int sip_parser_content_length(int *p_content_lenght, char *buffer);
 int sip_parser_content_type(char** p_content_type, char *buffer);
@@ -86,7 +86,14 @@ int sip_parser_message(sip_message_t *p_sip, char *buffer);
 /////
 
 #define MSG_IS_STATUS_CODE(buffer, num) \
-    (num == sip_msg_is_response(buffer))
+    (buffer && num == sip_msg_is_response(buffer))
+
+#define MSG_IS_200(buffer) \
+    MSG_IS_STATUS_CODE(buffer, OK)
+
+#define MSG_IS_202(buffer) \
+    MSG_IS_STATUS_CODE(buffer, ACCEPTED)
+
 
 #endif /*SIP_PARSER_H*/
 

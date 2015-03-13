@@ -1,128 +1,127 @@
 
 #include "sip_struct.h"
 
-//////////////////////////:
-// TO STRING
-/////
+#ifndef _strcpy
+#define _strcpy(dst, src) \
+    dst = (char*)calloc(strlen((char*)src)+1, sizeof(char)); \
+    strcpy(dst, src)
+#endif /*_strcpy*/
 
-int sip_from_to_string(sip_from_t *p_from, char **p_buffer){
-    if(p_from && p_buffer && *p_buffer){
-        short position = 0;
-        sprintf(*p_buffer, FROM_STR": %s <sip:%s@%s", p_from->username, p_from->username, p_from->host);
-        position=strlen((char*)*p_buffer);
-        if(p_from->port > 0){
-            sprintf(*p_buffer+position, ":%d>", p_from->port);
-            position=strlen((char*)*p_buffer);
+#ifndef _strncpy
+#define _strncpy(dst, src, size) \
+    dst = (char*)calloc(size+1, sizeof(char)); \
+    strncpy(dst, src, size)
+#endif /*_strncpy*/
+
+////////////////////////
+// Init Struct
+//////
+
+void init_sip_ruri_t(sip_ruri_t *p_ruri, char *scheme, char *username, char *host, unsigned int port){
+    if(p_ruri){
+        if(scheme){
+            _strcpy(p_ruri->scheme, scheme);
         }
-        if(p_from->tag && strlen((char*)p_from->tag) > 0){
-            sprintf(*p_buffer+position, ">;tag=%s", p_from->tag);
-        }else{
-            sprintf(*p_buffer+position, ">");
+        if(username){
+            _strcpy(p_ruri->username, username);
         }
-        return (int) 0;
+        if(host){
+            _strcpy(p_ruri->host, host);
+        }
+        if(port > 0){
+            p_ruri->port = port;
+        }
     }
-    return (int) -1;
+    return;
 }
 
-int sip_to_to_string(sip_to_t *p_to, char **p_buffer){
-    if(p_to && p_buffer && *p_buffer){
-        short position = 0;
-        sprintf(*p_buffer, TO_STR": %s <sip:%s@%s", p_to->username, p_to->username, p_to->host);
-        position=strlen((char*)*p_buffer);
-        if(p_to->port > 0){
-            sprintf(*p_buffer+position, ":%d>", p_to->port);
-            position=strlen((char*)*p_buffer);
+void init_sip_from_t(sip_from_t *p_from, char *scheme, char *username, char *host, unsigned int port, char *tag){
+    if(p_from){
+        if(scheme){
+            _strcpy(p_from->scheme, scheme);
         }
-        if(p_to->tag && strlen((char*)p_to->tag) > 0){
-            sprintf(*p_buffer+position, ";tag=%s", p_to->tag);
-        }else{
-            sprintf(*p_buffer+position, ">");
+        if(username){
+            _strcpy(p_from->username, username);
         }
-        return (int) 0;
+        if(host){
+            _strcpy(p_from->host, host);
+        }
+        if(port > 0){
+            p_from->port = port;
+        }
+        if(tag){
+            _strcpy(p_from->tag, tag);
+        }
     }
-    return (int) -1;
+    return;
 }
 
-int sip_content_type_to_string(char *content_type, char **p_buffer){
-    if(content_type && p_buffer && *p_buffer){
-        sprintf(*p_buffer, CONTENT_TYPE_STR": %s", content_type);
-        return (int) 0;
+void init_sip_to_t(sip_to_t *p_to, char *scheme, char *username, char *host, unsigned int port, char *tag){
+    if(p_to){
+        if(scheme){
+            _strcpy(p_to->scheme, scheme);
+        }
+        if(username){
+            _strcpy(p_to->username, username);
+        }
+        if(host){
+            _strcpy(p_to->host, host);
+        }
+        if(port > 0){
+            p_to->port = port;
+        }
+        if(tag){
+            _strcpy(p_to->tag, tag);
+        }
     }
-    return (int) -1;
+    return;
 }
 
-int sip_content_length_to_string(int content_length, char **p_buffer){
-    if(p_buffer && *p_buffer){
-        sprintf(*p_buffer, CONTENT_LENGTH_STR": %d", content_length);
-        return (int) 0;
+void init_sip_call_id_t(sip_call_id_t *p_call_id, char *number, char *host){
+    if(p_call_id){
+        if(number){
+            _strcpy(p_call_id->number, number);
+        }
+        if(host){
+            _strcpy(p_call_id->host, host);
+        }
     }
-    return (int) -1;
+    return;
 }
 
-int sip_cseq_to_string(sip_cseq_t *p_cseq, char **p_buffer){
-    if(p_cseq && p_buffer && *p_buffer){
-        sprintf(*p_buffer, CSEQ_STR": %d %s", p_cseq->number, p_cseq->method);
-        return (int) 0;
+void init_sip_cseq_t(sip_cseq_t *p_cseq, unsigned int number, char *method){
+    if(p_cseq){
+        if(number > 0){
+            p_cseq->number = number;
+        }
+        if(method){
+            _strcpy(p_cseq->method, method);
+        }
     }
-    return (int) -1;
+    return;
 }
 
-int sip_callid_to_string(sip_callid_t *p_callid, char **p_buffer){
-    if(p_callid && p_buffer && *p_buffer){
-        sprintf(*p_buffer, CALL_ID_STR": %s", p_callid->number);
-        if(p_callid->host){
-            sprintf(*p_buffer+strlen((char*)*p_buffer), "@%s", p_callid->host);
+void init_sip_message_t(sip_message_t *p_message, char *version, char *method, int status_code, char *reason_phrase, char *content_type, int content_length, char *message){
+    if(p_message){
+        if(version){
+            _strcpy(p_message->version, version);
         }
-        return (int) 0;
+        if(method){
+            _strcpy(p_message->method, method);
+        }
+        p_message->status_code = status_code;
+        if(reason_phrase){
+            _strcpy(p_message->reason_phrase, reason_phrase);
+        }
+        if(content_type){
+            _strcpy(p_message->content_type, content_type);
+        }
+        p_message->content_length = content_length;
+        if(message){
+            _strcpy(p_message->message, message);
+        }
     }
-    return (int) -1;
-}
-
-static int _sip_first_line_to_string(sip_message_t *p_sip, char **p_buffer, bool request){
-    if(p_sip && p_buffer && *p_buffer){
-        if(request){
-            sprintf(*p_buffer, "%s sip:%s@%s", p_sip->method, p_sip->uri.username, p_sip->uri.host);
-            if(p_sip->uri.port > 0){
-                sprintf(*p_buffer+strlen((char*)*p_buffer), ":%d %s", p_sip->uri.port, p_sip->version);
-            }else{
-                sprintf(*p_buffer+strlen((char*)*p_buffer), " %s", p_sip->version);
-            }
-        }else{//Response  
-            sprintf(*p_buffer, "%s %d %s", p_sip->version, p_sip->status_code, p_sip->reason_phrase);
-        }
-        return (int) 0;
-    }
-    return (int) -1;
-}
-
-int sip_message_to_string(sip_message_t *p_sip, char **p_buffer, bool request){
-    if(p_sip && p_buffer && *p_buffer == NULL){
-        char **imp = NULL;
-        short i = 0;
-        short max = request ? 9 : 7;
-        imp = (char**)calloc(10, sizeof(char*));
-        for(i=0;i<max;i++){
-            imp[i] = calloc(128, sizeof(char));
-        }
-        _sip_first_line_to_string(p_sip, &imp[0], request);
-        sip_from_to_string(&p_sip->from, &imp[1]);
-        sip_to_to_string(&p_sip->to, &imp[2]);
-        sip_cseq_to_string(&p_sip->cseq, &imp[3]);
-        sip_callid_to_string(&p_sip->call_id, &imp[4]);
-        sip_content_type_to_string(p_sip->content_type, &imp[5]);
-        sip_content_length_to_string(p_sip->content_length, &imp[6]);
-        if(request && strcmp(p_sip->method, MESSAGE_STR) == 0){
-            //spacement
-            strcpy(imp[8], p_sip->message);
-        }
-        implode(imp, "\r\n", p_buffer);
-        for(i=0;i<max;i++){
-            free(imp[i]);
-        }
-        free(imp);
-        return (int) 0;
-    }
-    return (int) -1;
+    return;
 }
 
 ////////////////////////
@@ -161,12 +160,12 @@ void destroy_sip_to(sip_to_t *p_to){
     return;
 }
 
-void destroy_sip_callid(sip_callid_t *p_callid){
-    if(p_callid->number){
-        free(p_callid->number);
+void destroy_sip_call_id(sip_call_id_t *p_call_id){
+    if(p_call_id->number){
+        free(p_call_id->number);
     }
-    if(p_callid->host){
-        free(p_callid->host);
+    if(p_call_id->host){
+        free(p_call_id->host);
     }
     return;
 }
@@ -195,10 +194,10 @@ void destroy_sip_message(sip_message_t *p_sip){
         free(p_sip->message);
     }
     destroy_sip_cseq(&p_sip->cseq);
-    destroy_sip_callid(&p_sip->call_id);
+    destroy_sip_call_id(&p_sip->call_id);
     destroy_sip_to(&p_sip->to);
     destroy_sip_from(&p_sip->from);
-    destroy_sip_ruri(&p_sip->uri);
+    destroy_sip_ruri(&p_sip->ruri);
     return;
 }
 
@@ -219,7 +218,7 @@ FREE_SIP_STRUCT(cseq)
 FREE_SIP_STRUCT(to)
 FREE_SIP_STRUCT(from)
 FREE_SIP_STRUCT(ruri)
-FREE_SIP_STRUCT(callid)
+FREE_SIP_STRUCT(call_id)
 FREE_SIP_STRUCT(message)
 
 #undef MAKE_FN_FREE_STRUCT
