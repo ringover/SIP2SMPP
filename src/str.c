@@ -39,22 +39,26 @@ char** explode(char *str_in, char *cutter){
     int nb_occur = count_occurence_in_string(str_in, cutter);
     
     if(nb_occur>0){
-        int   cpt = 0;
+        char  **exp = (char**)calloc(nb_occur+2, sizeof(char*));
+        char  *end  = str_in+strlen((char*)str_in);
         char  *cursor1 = str_in;
         char  *cursor2 = str_in;
-        char  **exp = (char**)malloc(sizeof(char*)*(nb_occur+1));
+        int   cpt = 0;
 
-        memset(exp,0,sizeof(char*)*(nb_occur+1));
-        while(cpt < nb_occur){
+        while(cursor1 < end){
                 cursor2 = (char*)strstr((char*)cursor1,(char*)cutter);
                 if(cursor2){
-                    char *temp = (char*)malloc(sizeof(char)*(cursor2-cursor1+1));
-                    memset(temp,0,cursor2-cursor1+1);
+                    char *temp = (char*)calloc(cursor2-cursor1+1, sizeof(char));
                     strncpy((char*)temp,(char*)cursor1,cursor2-cursor1);
                     *(exp+cpt) = temp;
+                    cursor1 = cursor2+strlen((char*)cutter);
+                }else if(end-cursor1 > 0){
+                    char *temp = (char*)calloc(end-cursor1+1, sizeof(char));
+                    strncpy((char*)temp,(char*)cursor1,end-cursor1);
+                    *(exp+cpt) = temp;
+                    cursor1 = end;
+                    break;
                 }
-
-                cursor1 = cursor2+strlen((char*)cutter);
                 cpt++;
         }
         return (char**)exp;

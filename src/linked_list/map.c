@@ -15,8 +15,8 @@ static iterator_map* _new_iterator_map(void *key, void* value){
 
 static void _free_iterator_map(iterator_map **it, free_key free_k, free_value free_v){
 	if(it && *it){
-		free_k(((*it)->key));
-		free_v(((*it)->value));
+		free_k(&((*it)->key));
+		free_v(&((*it)->value));
 		(*it)->previous = NULL;
 		(*it)->next     = NULL;
 		free(*it);

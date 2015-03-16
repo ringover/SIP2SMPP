@@ -63,6 +63,7 @@ static inline int _dump_pdu_and_buf(char *buffer, int len, void* data, char *com
         }
         INFO(LOG_SCREEN, "%s PDU \n%s\n"
                          "-----------------------------------------------------------\n", communication_mode, print_buffer)
+        return (int) 1;
     }
     return (int) ret;
 }
@@ -102,7 +103,7 @@ inline int smpp_receive(socket_t *sock, char *buffer, size_t buffer_len){
 
 inline int smpp_parser(char *buffer, int len, void **data){
     //Unpack PDU
-    if(buffer && len > 8 && data){
+    if(buffer && len > 8 && data && *data == NULL){
         int command_id = 0;
         int tt = 0;
         memcpy(&tt, (buffer+4), 4);//get command_id
@@ -208,11 +209,11 @@ int smpp_scan_sock(socket_t *sock, void **data){
     unsigned char buffer[2048] = { 0 };
     size_t buffer_len = sizeof(buffer);
     int ret = 0;
-    if((ret = smpp_receive(sock, buffer, buffer_len)) == -1){
-        return (int) -1;
+    if((ret = smpp_receive(sock, buffer, buffer_len)) == -1 || ret == 0){
+        return (int) ret;
     }
     if((ret = smpp_parser(buffer, ret, data)) != 0){
-        return (int) -1;
+        return (int) ret;
     }
     return (int) ret;
 }
@@ -293,7 +294,7 @@ static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg,
         tlv_t tlv = { 0 };
 
         //Init PDU
-        _init_pdu_header((void*)&req, command_id, ESME_ROK, 0);
+        _init_pdu_header((void*)&req, command_id, ESME_ROK, *sequence_number);
         *sequence_number = req.sequence_number;
 
         //Init submit or deliver
@@ -411,7 +412,7 @@ int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
 */
         if((sock->csocket = do_tcp_wait_client(sock, ip_remote, port_remote)) == -1){
             ERROR(LOG_SCREEN | LOG_FILE, "Client SMPP not connect (failed)")
-            return (int) -1;
+            return (int) sock->csocket;
         }
 /*
         sock->csocket = csock;       
@@ -449,7 +450,7 @@ int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
         return (int)req.command_id;
 */
     }
-    return (int) -1;
+    return (int) sock->csocket;
 }
 
 /**

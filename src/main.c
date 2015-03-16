@@ -256,8 +256,6 @@ int main(int argc,char **argv){
         pthread_create(&listen_smpp, NULL, func_listen_smpp, p_smpp_socket);
     }
    
-    while(true);
- 
     pthread_join(listen_sip,NULL);
     pthread_join(listen_smpp,NULL);
 

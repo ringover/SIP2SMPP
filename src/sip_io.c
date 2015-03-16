@@ -95,29 +95,34 @@ int sip_restart_connection(sip_socket_t *p_sip_socket){
 static int sip_recv_processing_request(socket_t *sock, sip_message_t *p_sip, char *interface, char *ip_origin, unsigned int port_origin){
     //SIP MESSAGE (SM)
     //go routing + save session (with call_id_number)
-    char *k_call_id = NULL;
-    sip_session_t *p_session = new_smpp_session_t();
-    sm_data_t *p_sm = new_sm_data_t();
-    //sm struct + insert db
-    init_sm_data_t(p_sm, sock, 0, I_SIP, ip_origin, port_origin, p_sip, p_sip->from.username, p_sip->to.username, p_sip->message);
-    p_sm->id = db_insert_sm(p_sip->call_id.number, 0, interface, ip_origin, port_origin, p_sm->src, p_sm->dst, p_sm->msg);
-    //Key p_session
-    _strcpy(k_call_id, p_sip->call_id.number);
-    //Value p_session
-    p_session->p_msg_sip = p_sip;
-    p_session->p_sm = p_sm;
-    //Set in map
-    map_set(map_session_sip, k_call_id, p_session);
-    //routing
-    if(routing(interface, ip_origin, port_origin, p_sm) == -1){
-        //send resp error
-        ERROR(LOG_SCREEN | LOG_FILE, "Routing return -1 -> destroy SM/Session SMPP and sent error")
-        p_sip->status_code = 401;
-        _strcpy(p_sip->reason_phrase, UNAUTHORIZED_STR);
-        sip_send_response(sock, ip_origin, port_origin, p_sip);
-        //SMS DESTROY
-        //map_erase(map_session_sip, k_call_id);
-        free_sm_data(&p_sm);
+    sip_session_t *p_session = (sip_session_t*)map_get(map_session_sip, p_sip->call_id.number);
+    if(p_session == NULL){
+        char *k_call_id = NULL;
+        p_session = new_sip_session_t();
+        sm_data_t *p_sm = new_sm_data_t();
+        //sm struct + insert db
+        init_sm_data_t(p_sm, sock, 0, I_SIP, ip_origin, port_origin, p_sip, p_sip->from.username, p_sip->to.username, p_sip->message);
+        p_sm->id = db_insert_sm(p_sip->call_id.number, 0, interface, ip_origin, port_origin, p_sm->src, p_sm->dst, p_sm->msg);
+        //Key p_session
+        _strcpy(k_call_id, p_sip->call_id.number);
+        //Value p_session
+        p_session->p_msg_sip = p_sip;
+        p_session->p_sm = p_sm;
+        //Set in map
+        map_set(map_session_sip, k_call_id, p_session);
+        //routing
+        if(routing(interface, ip_origin, port_origin, p_sm) == -1){
+            //send resp error
+            ERROR(LOG_SCREEN | LOG_FILE, "Routing return -1 -> destroy SM/Session SMPP and sent error")
+            p_sip->status_code = 401;
+            _strcpy(p_sip->reason_phrase, UNAUTHORIZED_STR);
+            sip_send_response(sock, ip_origin, port_origin, p_sip);
+            //SMS DESTROY
+            //map_erase(map_session_sip, k_call_id);
+            free_sm_data(&p_sm);
+        }
+    }else{
+        free_sip_message(&p_sip);
     }
     return (int) -1;
 }

@@ -74,7 +74,7 @@ int sip_msg_is_response(char *buffer){
             if(tmp && tmp < at){ \
                 /*sip:user@*/ \
                 _strncpy(scheme, start, tmp-start); \
-                _strncpy(username, ++tmp, at-tmp); \
+                _strncpy(username, ++tmp, at-tmp-1); \
             }else{ \
                 /*user@*/ \
                 _strncpy(username, start, at-start); \
@@ -127,7 +127,7 @@ int sip_parser_from(sip_from_t *p_from, char *buffer){
         end = strchr(start, ';');
         if(end){
             //;tag=123456789
-            _strncpy(p_from->tag, end+6, strlen(end--)-5);
+            _strncpy(p_from->tag, end+5, strlen(end)-5);
         }else{
             end = start+strlen((char*)start);
         }
@@ -151,7 +151,7 @@ int sip_parser_to(sip_to_t *p_to, char *buffer){
         end = strchr(start, ';');
         if(end){
             //;tag=123456789
-            _strncpy(p_to->tag, end+6, strlen(end--)-5);
+            _strncpy(p_to->tag, end+5, strlen(end)-5);
         }else{
             end = start+strlen((char*)start);
         }
@@ -287,7 +287,7 @@ int sip_parser_message(sip_message_t *p_sip, char *buffer){
         exp = explode(buffer,"\r\n");
         if(exp != NULL){
             sip_parser_first_line(p_sip, *(exp + i++));
-            while(*(exp+i)){
+            while(exp[i]){
                 switch(sip_what_is_the_header(*(exp+i))){
                     case FROM :
                         sip_parser_from(&p_sip->from, *(exp+i));
@@ -319,7 +319,9 @@ int sip_parser_message(sip_message_t *p_sip, char *buffer){
             if(exp){
                 i = 0;
                 while(*(exp+i)){
-                    free(*(exp + i++));
+                    if(*(exp+i)){
+                        free(*(exp + i++));
+                    }
                 }
                 free(exp);
             }

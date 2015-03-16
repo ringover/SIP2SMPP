@@ -35,9 +35,9 @@ inline int do_tcp_recv(socket_t *sock, unsigned char *buffer, size_t buffer_len,
             if(ret == 0){
                 ERROR(LOG_FILE | LOG_SCREEN, "Client disconected")
                 //client disconected
+            }else{
+                INFO(LOG_SCREEN, "Recv Msg[%d:%d]\n%s", ret, buffer_len, buffer)
             }
-            INFO(LOG_SCREEN, "Recv Msg[%d:%d]\n%s", ret, buffer_len, buffer)
-
             pthread_mutex_unlock(&sock->mutex);
         }
 
@@ -95,7 +95,7 @@ int tcp_socket_server(socket_t *sock, char *ip_host, int port_host){
 }
 
 int do_tcp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
-    int res = 0;
+    int res = -1;
     if(sock && ip_remote && port_remote){
         struct sockaddr_in sin = { 0 };
         int sinsize = sizeof(sin);
@@ -104,13 +104,13 @@ int do_tcp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
         if((res = accept(sock->socket, &sin, &sinsize)) == -1){
             ERROR(LOG_FILE | LOG_SCREEN, "Accept TCP failes[%d] %s", errno, strerror(errno))
             return (int) res;
-	}
+        }
 
         *port_remote = ntohs(sin.sin_port);
         *ip_remote   = inet_ntoa(sin.sin_addr);
-        DEBUG(LOG_SCREEN, "The TCP client is %s:%d", *ip_remote, *port_remote);
+        DEBUG(LOG_SCREEN, "The TCP client[%d] is %s:%d", res, *ip_remote, *port_remote);
     }
-    //return 0 or client_socket
+    //return -1 or client_socket
     return (int) res;
 }
 

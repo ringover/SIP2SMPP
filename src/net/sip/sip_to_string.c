@@ -11,7 +11,7 @@ int sip_from_to_string(sip_from_t *p_from, char **p_buffer){
         sprintf(*p_buffer, FROM_STR": %s <sip:%s@%s", p_from->username, p_from->username, p_from->host);
         position=strlen((char*)*p_buffer);
         if(p_from->port > 0){
-            sprintf(*p_buffer+position, ":%d>", p_from->port);
+            sprintf(*p_buffer+position, ":%d", p_from->port);
             position=strlen((char*)*p_buffer);
         }
         if(p_from->tag && strlen((char*)p_from->tag) > 0){
@@ -30,11 +30,11 @@ int sip_to_to_string(sip_to_t *p_to, char **p_buffer){
         sprintf(*p_buffer, TO_STR": %s <sip:%s@%s", p_to->username, p_to->username, p_to->host);
         position=strlen((char*)*p_buffer);
         if(p_to->port > 0){
-            sprintf(*p_buffer+position, ":%d>", p_to->port);
+            sprintf(*p_buffer+position, ":%d", p_to->port);
             position=strlen((char*)*p_buffer);
         }
         if(p_to->tag && strlen((char*)p_to->tag) > 0){
-            sprintf(*p_buffer+position, ";tag=%s", p_to->tag);
+            sprintf(*p_buffer+position, ">;tag=%s", p_to->tag);
         }else{
             sprintf(*p_buffer+position, ">");
         }

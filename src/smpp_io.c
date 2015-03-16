@@ -344,11 +344,13 @@ int smpp_recv_processing_request(socket_t *sock, const void *req){
                 p_sip->status_code = 406; \
                 _strcpy(p_sip->reason_phrase, NOT_ACCEPTABLE_STR); \
             } \
+            p_sip->content_length = 0; \
+            p_sip->cseq.number++; \
             if(sip_send_response(p_session->p_sm->sock, p_session->p_sm->ip_origin, p_session->p_sm->port_origin, p_sip) != -1){ \
                 /*Clean DB*/ \
                 db_delete_sm_by_id(p_session->p_sm->id); \
                 /*Clean Memory*/ \
-                free_sm_data(p_session->p_sm); \
+                free_sm_data(&p_session->p_sm); \
                 map_erase(map_session_sip, p_sip->call_id.number);/*clean origin session*/ \
                 map_erase(map_session_smpp, &((generic_nack_t*)p_session->p_msg_smpp)->sequence_number);/*clean forward session*/ \
             } \
@@ -407,7 +409,7 @@ int smpp_recv_processing_response(void *res){
                 case BIND_TRANSMITTER_RESP :
                 case BIND_RECEIVER_RESP :
                 case BIND_TRANSCEIVER_RESP :
-                    map_erase(map_session_smpp, ((generic_nack_t*)res)->sequence_number);
+                    map_erase(map_session_smpp, &((generic_nack_t*)res)->sequence_number);
                     break;
                 default : 
                     INFO(LOG_SCREEN, "Response not allowed[%d]", ((generic_nack_t*)res)->command_id)
@@ -421,10 +423,10 @@ int smpp_recv_processing_response(void *res){
 static void* smpp_recv_processing(void *data){
     void **all_data = (void**)data;
     smpp_socket_t *smpp_sock = (smpp_socket_t*)all_data[1];
-    if(DELIVER_SM == ((generic_nack_t*)data)->command_id  || SUBMIT_SM == ((generic_nack_t*)data)->command_id){//REQUEST : SUBMIT or DELIVER
+    if(DELIVER_SM == ((generic_nack_t*)all_data[0])->command_id  || SUBMIT_SM == ((generic_nack_t*)all_data[0])->command_id){//REQUEST : SUBMIT or DELIVER
         return smpp_recv_processing_request_sm(smpp_sock->sock, smpp_sock->interface, smpp_sock->ip_remote, smpp_sock->port_remote, all_data[0]);
-    }else if(((generic_nack_t*)data)->command_id & GENERIC_NACK){//RESPONSE
-        return smpp_recv_processing_response(smpp_sock->sock);
+    }else if(((generic_nack_t*)all_data[0])->command_id & GENERIC_NACK){//RESPONSE
+        return smpp_recv_processing_response(all_data[0]);
     }else{//REQUEST
         return smpp_recv_processing_request(smpp_sock->sock, all_data[0]);
     }
@@ -456,11 +458,12 @@ int send_sms_to_client_smpp(unsigned char* interface_name, sm_data_t *p_sm){
     smpp_socket_t  *p_sock = map_get(map_iface_smpp, interface_name);
     //create session + send submit_sm_t
     if(p_sock && (p_sock->bind == BIND_TRANSMITTER || p_sock->bind == BIND_TRANSCEIVER) && p_sm){
-        unsigned int k_sequence_number = new_uint32();
+        unsigned int *k_sequence_number = new_uint32();
         smpp_session_t *v_session = new_smpp_session_t();
         generic_nack_t *gen = (generic_nack_t*)calloc(1, sizeof(generic_nack_t));
         //......
         gen->sequence_number = get_sequence_number();
+        *k_sequence_number = gen->sequence_number;
         v_session->command_id = SUBMIT_SM;
         v_session->p_msg_smpp = gen;
         v_session->p_sm = p_sm;

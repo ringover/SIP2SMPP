@@ -14,7 +14,7 @@ static char *create_stmts = {
                 "port_origin INTEGER, "
                 "src VARCHAR(32), "
                 "dst VARCHAR(32), "
-                "msg TEXT"
+                "msg TEXT,"
                 "creation DATETIME"
                 ")"
         };

@@ -117,7 +117,7 @@ int sip_send_request(socket_t *sock, char* ip_remote, unsigned int port_remote, 
     char *buffer = NULL;
     int ret = -1;
     if((ret = sip_message_to_string(p_sip, &buffer, true)) != -1){
-        ret = do_tcp_send(sock, buffer, strlen((char*)buffer), ip_remote, port_remote);
+        ret = do_udp_send(sock, buffer, strlen((char*)buffer), ip_remote, port_remote);
         if(buffer){
             free(buffer);
         }
@@ -129,7 +129,7 @@ int sip_send_response(socket_t *sock, char* ip_remote, unsigned int port_remote,
     char *buffer = NULL;
     int ret = -1;
     if((ret = sip_message_to_string(p_sip, &buffer, false)) != -1){
-        ret = do_tcp_send(sock, buffer, strlen((char*)buffer), ip_remote, port_remote);
+        ret = do_udp_send(sock, buffer, strlen((char*)buffer), ip_remote, port_remote);
         if(buffer){
             free(buffer);
         }
@@ -143,22 +143,26 @@ int sip_send_response(socket_t *sock, char* ip_remote, unsigned int port_remote,
 char *str = {
 "MESSAGE sip:442871140400@213.144.188.100:5061 SIP/2.0\r\nVia: SIP/2.0/UDP 213.144.188.10:48375;branch=z9hG4bK.09d30702;rport;alias\r\nTo: 442871140400 <sip:442871140400@213.144.188.100:5061>;tag=15684\r\nCall-ID: 1765119653@213.144.188.10\r\nCSeq: 1 MESSAGE\r\nContent-Type: text/plain\r\nMax-Forwards: 70\r\nUser-Agent: sipsak 0.9.6\r\nFrom: sip:33643844688@213.144.188.100\r\nContent-Length: 11\r\n\r\nHello World\r\n"};
 
+
+char *str2 = {"MESSAGE sip:33643844688@192.168.1.101:5061 SIP/2.0\r\nVia: SIP/2.0/UDP 127.0.1.1:34185;branch=z9hG4bK.6d1728f2;rport;alias\r\nTo: sip:33643844688@192.168.1.101:5061\r\nCall-ID: 256803578@127.0.1.1\r\nCSeq: 1 MESSAGE\r\nContent-Type: text/plain\r\nMax-Forwards: 70\r\nUser-Agent: sipsak 0.9.6\r\nFrom: sip:442871140400@127.0.0.1:6000;tag=f4e82fa\r\nContent-Length: 11\r\n\r\nHello World\r\n"};
+
+
 int main(){
     char *str_response = NULL;
     char *str_request = NULL;
 
-    init_callid(NULL);
+    init_call_id(NULL);
 
     sip_message_t sip = { 0 };
 
-    sip_parser_message(&sip, str);
+    sip_parser_message(&sip, str2);
 
     sip.status_code = 200;
     sip.reason_phrase = (char*)calloc(3,sizeof(char));
     strcpy(sip.reason_phrase, OK_STR);
     free(sip.call_id.number);
     sip.call_id.number = NULL;
-    generate_callid(&sip.call_id.number);
+    generate_call_id(&sip.call_id.number);
 
     sip_message_to_string(&sip, &str_request, true);
     printf("%s\n", str_request);

@@ -69,6 +69,7 @@ typedef struct cancel_sm_resp_t cancel_sm_resp_t;
 typedef struct replace_sm_t replace_sm_t; 
 typedef struct replace_sm_resp_t replace_sm_resp_t; 
 typedef struct enquire_link_t enquire_link_t; 
+typedef struct enquire_link_resp_t enquire_link_resp_t; 
 typedef struct alert_notification_t alert_notification_t; 
 
 /* TYPEDEFs structs ***********************************************************/
@@ -233,7 +234,6 @@ struct enquire_link_t {
     #include "def_frame/header.frame"
 };
 
-typedef struct enquire_link_resp_t enquire_link_resp_t; 
 struct enquire_link_resp_t {
     #include "def_frame/header.frame"
 };
