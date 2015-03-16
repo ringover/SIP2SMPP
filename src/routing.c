@@ -39,6 +39,8 @@ int routing(const unsigned char *interface_name, const unsigned char *origin_ip,
         char *r_user = NULL;
         char *r_ip   = NULL;
         unsigned int   r_port = NULL;
+//        res = send_sms_to_sip(I_LISTEN_SIP, p_sm, "192.168.1.51", 5075);
+//        return (int) 0;
         //Get routing
         TRY
             con = ConnectionPool_getConnection(mysql_pool);

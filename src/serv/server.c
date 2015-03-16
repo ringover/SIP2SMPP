@@ -18,21 +18,10 @@
 char buffer[2048];
 socket_t *sock;
 
-
-int main(){
-    char *ip_remote = NULL;
-    int port_remote = 0;
-    log2display(LOG_ALERT);
-    log_init("logFile",NULL);
-    memset(buffer, 0, 2048);
-    sock = new_socket_t();
-    smpp_send_bind_server(sock, "127.0.0.1", 2780);
-    sock->socket = smpp_wait_client(sock, &ip_remote, &port_remote);
-
+void* server_listen(void *p_data){
     while(true){
         void *data = NULL;
         if(smpp_scan_sock(sock, &data) == 0){
-            //INFO(LOG_SCREEN, "Client disconected");
             break;
         }
         if(data){
@@ -61,6 +50,39 @@ int main(){
             free(data);
         }
     }
+    return NULL;
+}
+
+void* server_send(void *p_data){
+    while(true){
+        char str[1024] = "";
+        scanf("%s", str);
+        if(strcmp(str, "send") == 0){
+            unsigned int seq_num = (unsigned int)rand();
+            smpp_send_submit_sm(sock, "33123456789", "44123456789", "Kikoo World", &seq_num, 1, 1, 1, 1);
+        }
+    }
+    return NULL;
+}
+
+pthread_t pth_listen;
+pthread_t pth_send;
+
+int main(){
+    char *ip_remote = NULL;
+    int port_remote = 0;
+    log2display(LOG_ALERT);
+    log_init("logFile",NULL);
+    memset(buffer, 0, 2048);
+    sock = new_socket_t();
+    smpp_send_bind_server(sock, "127.0.0.1", 2780);
+    sock->socket = smpp_wait_client(sock, &ip_remote, &port_remote);
+
+    pthread_create(&pth_listen, NULL, server_listen, NULL);
+    pthread_create(&pth_send, NULL, server_send, NULL);
+
+    pthread_join(pth_listen, NULL);
+    pthread_join(pth_send, NULL);
 
     tcp_close(sock);
     return 0;

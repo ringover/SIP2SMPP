@@ -261,7 +261,7 @@ int smpp_recv_processing_request_sm(socket_t *sock, char *interface, char *ip_re
             if(routing(interface, ip_remote, port_remote, p_sm) == -1){
                 //send resp error
                 ERROR(LOG_SCREEN | LOG_FILE, "Routing return -1 -> destroy SM/Session SMPP and sent error")
-                smpp_send_response(sock, req->command_id & GENERIC_NACK, ESME_RINVCMDID, req->sequence_number);
+                smpp_send_response(sock, req->command_id + GENERIC_NACK, ESME_RINVCMDID, &req->sequence_number);
                 //SMS DESTROY
                 map_erase(map_session_smpp, k_smpp_data);
                 free_sm_data(&p_sm);
