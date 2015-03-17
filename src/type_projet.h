@@ -10,7 +10,7 @@ extern "C"{
 
 #define sizearray(a) (sizeof(a) / sizeof((a)[0]))
 
-#define VERSION          "2.0"
+#define VERSION          "0.2.0"
 #define DEFAULT_CONFIG   "/etc/sip2smpp/config.ini"
 #define DEFAULT_PIDFILE  "/var/run/sip2smpp.pid"
 
