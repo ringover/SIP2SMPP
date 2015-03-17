@@ -114,6 +114,7 @@ static int sip_recv_processing_request(socket_t *sock, sip_message_t *p_sip, cha
         if(routing(interface, ip_origin, port_origin, p_sm) == -1){
             //send resp error
             ERROR(LOG_SCREEN | LOG_FILE, "Routing return -1 -> destroy SM/Session SMPP and sent error")
+            p_sip->content_length = 0;
             p_sip->status_code = 401;
             _strcpy(p_sip->reason_phrase, UNAUTHORIZED_STR);
             sip_send_response(sock, ip_origin, port_origin, p_sip);
@@ -231,7 +232,7 @@ int send_sms_to_sip(unsigned char *interface_name, sm_data_t *p_sm, unsigned cha
         sip_session_t *v_session = new_sip_session_t();
         //create SIP MESSAGE message
         sip_message_t *p_sip = new_sip_message_t();
-        init_sip_message_t(p_sip, SIP_VERSION, MESSAGE_STR, 0, NULL, TEXT_PLAIN_STR, strlen(p_sm->msg), p_sm->msg);
+        init_sip_message_t(p_sip, SIP_VERSION, MESSAGE_STR, 0, NULL, NULL, TEXT_PLAIN_STR, strlen(p_sm->msg), p_sm->msg);
         init_sip_ruri_t(&p_sip->ruri, "sip", p_sm->dst, ip_remote, port_remote);
         init_sip_from_t(&p_sip->from, "sip", p_sm->src, p_sock->sock->ip, p_sock->sock->port, NULL);
         init_sip_to_t(&p_sip->to, "sip",   p_sm->dst, ip_remote, port_remote, NULL);

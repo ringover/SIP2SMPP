@@ -28,6 +28,7 @@ int sip_parser_from(sip_from_t *p_from, char *buffer);
 int sip_parser_to(sip_to_t *p_to, char *buffer);
 int sip_parser_call_id(sip_call_id_t *p_call_id, char *buffer);
 int sip_parser_cseq(sip_cseq_t *p_cseq, char *buffer);
+int sip_parser_contact(char **p_contact, char *buffer);
 int sip_parser_content_length(int *p_content_lenght, char *buffer);
 int sip_parser_content_type(char** p_content_type, char *buffer);
 int sip_parser_message(sip_message_t *p_sip, char *buffer);

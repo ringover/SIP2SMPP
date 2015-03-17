@@ -206,6 +206,39 @@ int sip_parser_content_length(int *p_content_length, char *buffer){
     return (int) 0;
 }
 
+int sip_parser_via(sip_via_t **p_p_via, char *buffer){
+    if(p_p_via && buffer && *buffer){
+        char *start = strchr(buffer, ' ');
+        ++start;
+
+        if(*p_p_via){
+            sip_via_t *p_via = *p_p_via;
+            while(p_via->via_next){
+                p_via = p_via->via_next;
+            }
+            p_via->via_next = new_sip_via_t();
+            init_sip_via_t(p_via->via_next, start, NULL);
+        }else{
+            *p_p_via = new_sip_via_t();
+            init_sip_via_t(*p_p_via, start, NULL);
+        }
+    }else{
+        ERROR(LOG_SCREEN, "Via Syntax error");
+        return (int) -1;
+    }
+}
+
+int sip_parser_contact(char **p_contact, char *buffer){
+    if(p_contact && buffer){
+        char *start = strchr(buffer, ' ');
+        _strncpy(*p_contact, ++start, strlen((char*)start)); 
+    }else{
+        ERROR(LOG_SCREEN, "Contact Syntax error");
+        return (int) -1;
+    }
+    return (int) 0;
+}
+
 int sip_parser_cseq(sip_cseq_t *p_cseq, char *buffer){
     //CSeq: 1 MESSAGE
     if(p_cseq && buffer){
@@ -306,6 +339,12 @@ int sip_parser_message(sip_message_t *p_sip, char *buffer){
                         break;
                     case CONTENT_LENGTH :
                         sip_parser_content_length(&p_sip->content_length, *(exp+i));
+                        break;
+                    case CONTACT :
+                        sip_parser_contact(&p_sip->contact, *(exp+i));
+                        break;
+                    case VIA :
+                        sip_parser_via(&p_sip->via, *(exp+i));
                         break;
                     case CONTENT ://"\r\n" line
                         i++;

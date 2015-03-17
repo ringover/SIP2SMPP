@@ -280,29 +280,29 @@ int smpp_recv_processing_request(socket_t *sock, const void *req){
         switch(((generic_nack_t*)req)->command_id){
             case UNBIND :
             {   unbind_t *unbind = (unbind_t*)req;
-                ret = smpp_send_response(sock, UNBIND_RESP, unbind->sequence_number, ESME_ROK);
+		ret = smpp_send_unbind_resp(sock, unbind->sequence_number, ESME_ROK);
                 //TODO : clean socket, ...
             }   break;
             case ENQUIRE_LINK :
             {   enquire_link_t *enq_l = (enquire_link_t*)req;
-                ret = smpp_send_response(sock, ENQUIRE_LINK_RESP, enq_l->sequence_number, ESME_ROK);
+		ret = smpp_send_unquire_link_resp(sock, enq_l->sequence_number, ESME_ROK);
             }   break;
             case QUERY_SM :
             {   //TODO
                 query_sm_t *query = (query_sm_t*)req;
-                ret = smpp_send_response(sock, QUERY_SM_RESP, query->sequence_number, ESME_RINVCMDID);
+                ret = smpp_send_response(sock, QUERY_SM_RESP, &query->sequence_number, ESME_RINVCMDID);
                 INFO(LOG_SCREEN, "QUERY_SM not allowed")
             }   break;
             case REPLACE_SM :
             {   //TODO
                 replace_sm_t *repl = (replace_sm_t*)req;
-                ret = smpp_send_response(sock, REPLACE_SM_RESP, repl->sequence_number, ESME_RINVCMDID);
+		ret = smpp_send_replace_sm_resp(sock, repl->sequence_number, ESME_RINVCMDID);
                 INFO(LOG_SCREEN, "REPLACE_SM not allowed")
             }   break;
             case CANCEL_SM :
             {   //TODO
                 cancel_sm_t *cancel = (cancel_sm_t*)req;
-                ret = smpp_send_response(sock, CANCEL_SM_RESP, cancel->sequence_number, ESME_RINVCMDID);
+		ret = smpp_send_cancel_sm_resp(sock, cancel->sequence_number, ESME_RINVCMDID);
                 INFO(LOG_SCREEN, "CANCEL_SM not allowed")
             }   break;
             case ALERT_NOTIFICATION :
@@ -323,7 +323,7 @@ int smpp_recv_processing_request(socket_t *sock, const void *req){
                 smpp_send_bind_transceiver_resp(sock, p_bind->system_id, p_bind->sequence_number, ESME_ROK, false);
             }   break;
             default:
-            {   ret = smpp_send_response(sock, DATA_SM_RESP, ((generic_nack_t*)req)->sequence_number, ESME_RINVCMDID);
+            {   ret = smpp_send_response(sock, DATA_SM_RESP, &((generic_nack_t*)req)->sequence_number, ESME_RINVCMDID);
                 ERROR(LOG_SCREEN | LOG_FILE ,"Request not allowed [%d:%d]", ((generic_nack_t*)req)->command_id, ((generic_nack_t*)req)->command_status)
             }   break;
         }
@@ -332,20 +332,24 @@ int smpp_recv_processing_request(socket_t *sock, const void *req){
     return (int) ret;
 }
 
+/*
+                p_sip->status_code = 202; \
+                _strcpy(p_sip->reason_phrase, ACCEPTED_STR); \
+*/
 #define smpp_response_sm(data, p_session) \
     /*Get original message*/ \
     switch(p_session->p_sm->type){ \
         case I_SIP : \
         {   sip_message_t *p_sip = (sip_message_t*)p_session->p_sm->p_msg_origin; \
             if(data->command_status == ESME_ROK){ \
-                p_sip->status_code = 200; \
-                _strcpy(p_sip->reason_phrase, OK_STR); \
+                p_sip->status_code = 202; \
+                _strcpy(p_sip->reason_phrase, ACCEPTED_STR); \
             }else{ \
                 p_sip->status_code = 406; \
                 _strcpy(p_sip->reason_phrase, NOT_ACCEPTABLE_STR); \
             } \
             p_sip->content_length = 0; \
-            p_sip->cseq.number++; \
+            /*p_sip->cseq.number++;*/ \
             if(sip_send_response(p_session->p_sm->sock, p_session->p_sm->ip_origin, p_session->p_sm->port_origin, p_sip) != -1){ \
                 /*Clean DB*/ \
                 db_delete_sm_by_id(p_session->p_sm->id); \

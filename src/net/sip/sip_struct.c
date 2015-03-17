@@ -77,6 +77,18 @@ void init_sip_to_t(sip_to_t *p_to, char *scheme, char *username, char *host, uns
     return;
 }
 
+void init_sip_via_t(sip_via_t *p_via, char *via_str, sip_via_t *p_via_next){
+    if(p_via){
+        if(via_str){
+            _strcpy(p_via->via_str, via_str);
+        }
+        if(p_via_next){
+            p_via->via_next = p_via_next;
+        }
+    }
+    return;
+}
+
 void init_sip_call_id_t(sip_call_id_t *p_call_id, char *number, char *host){
     if(p_call_id){
         if(number){
@@ -101,7 +113,7 @@ void init_sip_cseq_t(sip_cseq_t *p_cseq, unsigned int number, char *method){
     return;
 }
 
-void init_sip_message_t(sip_message_t *p_message, char *version, char *method, int status_code, char *reason_phrase, char *content_type, int content_length, char *message){
+void init_sip_message_t(sip_message_t *p_message, char *version, char *method, int status_code, char *reason_phrase, char* contact, char *content_type, int content_length, char *message){
     if(p_message){
         if(version){
             _strcpy(p_message->version, version);
@@ -112,6 +124,9 @@ void init_sip_message_t(sip_message_t *p_message, char *version, char *method, i
         p_message->status_code = status_code;
         if(reason_phrase){
             _strcpy(p_message->reason_phrase, reason_phrase);
+        }
+        if(contact){
+            _strcpy(p_message->contact, contact);
         }
         if(content_type){
             _strcpy(p_message->content_type, content_type);
@@ -177,6 +192,18 @@ void destroy_sip_cseq(sip_cseq_t *p_cseq){
     return;
 }
 
+void destroy_sip_via(sip_via_t *p_via){
+    if(p_via->via_str){
+        free(p_via->via_str);
+    }
+    if(p_via->via_next){
+        destroy_sip_via(p_via->via_next);
+        free(p_via->via_next);
+        p_via->via_next = NULL;
+    }
+    return;
+}
+
 void destroy_sip_message(sip_message_t *p_sip){
     if(p_sip->version){
         free(p_sip->version);
@@ -186,6 +213,9 @@ void destroy_sip_message(sip_message_t *p_sip){
     }
     if(p_sip->reason_phrase){
         free(p_sip->reason_phrase);
+    }
+    if(p_sip->contact){
+        free(p_sip->contact);
     }
     if(p_sip->content_type){
         free(p_sip->content_type);
@@ -220,6 +250,8 @@ FREE_SIP_STRUCT(from)
 FREE_SIP_STRUCT(ruri)
 FREE_SIP_STRUCT(call_id)
 FREE_SIP_STRUCT(message)
+FREE_SIP_STRUCT(via)
+
 
 #undef MAKE_FN_FREE_STRUCT
 #undef FREE_SIP_STRUCT

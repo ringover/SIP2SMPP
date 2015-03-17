@@ -59,6 +59,24 @@ int sip_content_length_to_string(int content_length, char **p_buffer){
     return (int) -1;
 }
 
+int sip_contact_to_string(char *contact, char **p_buffer){
+    if(p_buffer && *p_buffer){
+        sprintf(*p_buffer, CONTACT_STR": %s", contact);
+        return (int) 0;
+    }
+    return (int) -1;
+}
+
+int sip_via_to_string(sip_via_t *p_via, char **imp, short *i){
+    if(p_via && imp && i){
+        while(p_via){
+            sprintf(*(imp + (*i)++), VIA_STR": %s", p_via->via_str);
+            p_via = p_via->via_next;
+        }
+    }
+    return (int) -1;
+}
+
 int sip_cseq_to_string(sip_cseq_t *p_cseq, char **p_buffer){
     if(p_cseq && p_buffer && *p_buffer){
         sprintf(*p_buffer, CSEQ_STR": %d %s", p_cseq->number, p_cseq->method);
@@ -100,20 +118,42 @@ int sip_message_to_string(sip_message_t *p_sip, char **p_buffer, bool request){
         char **imp = NULL;
         short i = 0;
         short max = request ? 9 : 7;
-        imp = (char**)calloc(10, sizeof(char*));
+        if(strcmp(p_sip->method, MESSAGE_STR) == 0){
+            max += 2;
+        }
+        if(p_sip->via){
+            sip_via_t *p_via = p_sip->via;
+            while(p_via){
+                max++;
+		p_via = p_via->via_next;
+            }
+        }
+        if(p_sip->contact && strlen((char*)p_sip->contact) > 0){
+            max++;
+        }
+        imp = (char**)calloc(max+1, sizeof(char*));
         for(i=0;i<max;i++){
             imp[i] = calloc(128, sizeof(char));
         }
-        _sip_first_line_to_string(p_sip, &imp[0], request);
-        sip_from_to_string(&p_sip->from, &imp[1]);
-        sip_to_to_string(&p_sip->to, &imp[2]);
-        sip_cseq_to_string(&p_sip->cseq, &imp[3]);
-        sip_call_id_to_string(&p_sip->call_id, &imp[4]);
-        sip_content_type_to_string(p_sip->content_type, &imp[5]);
-        sip_content_length_to_string(p_sip->content_length, &imp[6]);
+        i = 0;
+
+        _sip_first_line_to_string(p_sip, &imp[i++], request);
+        if(p_sip->via){
+            sip_via_to_string(p_sip->via, imp, &i);
+        }
+        sip_from_to_string(&p_sip->from, &imp[i++]);
+        sip_to_to_string(&p_sip->to, &imp[i++]);
+        sip_cseq_to_string(&p_sip->cseq, &imp[i++]);
+        sip_call_id_to_string(&p_sip->call_id, &imp[i++]);
+        if(p_sip->contact && strlen((char*)p_sip->contact) > 0){
+            sip_contact_to_string(p_sip->contact, &imp[i++]);
+        }
+        sip_content_type_to_string(p_sip->content_type, &imp[i++]);
+        sip_content_length_to_string(p_sip->content_length, &imp[i++]);
         if(request && strcmp(p_sip->method, MESSAGE_STR) == 0){
             //spacement
-            strcpy(imp[8], p_sip->message);
+            i++;
+            strcpy(imp[i++], p_sip->message);
         }
         implode(imp, "\r\n", p_buffer);
         for(i=0;i<max;i++){

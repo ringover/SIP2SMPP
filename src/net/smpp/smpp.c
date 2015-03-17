@@ -319,16 +319,16 @@ static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg,
         //if message is <255 octets
           //req.sm_length = strlen((char*)message);
           //memcpy(req.short_message, message, req.sm_length);
-        if(strlen((char*)msg) < 255){
+/*        if(strlen((char*)msg) < 255){
             req.sm_length = strlen((char*)msg);
             memcpy(req.short_message, msg, req.sm_length);
-        }else{
+        }else{*/
             //if message is > 254 octets or > 0 octet
             tlv.tag = TLVID_message_payload;
             tlv.length = strlen((char*)msg);
             memcpy(tlv.value.octet, msg, tlv.length);
             build_tlv( &(req.tlv), &tlv );
-        }
+        //}
         // Add other optional param - sample
         //tlv.tag = TLVID_user_message_reference;
         //tlv.length = sizeof(uint16_t);
