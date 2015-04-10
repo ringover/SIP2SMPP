@@ -122,7 +122,7 @@ static TCHAR *save_strncpy(TCHAR *dest, const TCHAR *source, size_t maxlen, enum
   size_t d, s;
 
   assert(maxlen>0);
-  assert(dest <= source || dest >= source + maxlen);
+//  assert(dest <= source || dest >= source + maxlen);
   if (option == QUOTE_ENQUOTE && maxlen < 3)
     option = QUOTE_NONE;  /* cannot store two quotes and a terminating zero in less than 3 characters */
 

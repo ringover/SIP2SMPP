@@ -52,8 +52,8 @@ static char *query_count_sm = {
  * Function DB
  */
 
-#define DEF_URL "sqlite://%s?synchronous=normal&heap_limit=8096000&foreign_keys=on"
-//#define DEF_URL "sqlite://%s?synchronous=%s&heap_limit=%d&foreign_keys=%s&encoding=%s"
+#define DEF_URL "sqlite://%s?synchronous=%s&heap_limit=%d&foreign_keys=%s&encoding=%s"
+
 static ConnectionPool_T pool = NULL;
 static URL_T url             = NULL;
 static char *str_url         = NULL;
@@ -61,25 +61,28 @@ static char *str_url         = NULL;
 
 int db_init(void){
     int ret = 0;
-    if(!dbms_ini.dbms_name && !dbms_ini.db_path){
+
+    if(!cfg_sqlite){
+        return (int) -1;
+    }
+
+    if(!cfg_sqlite->path && !cfg_sqlite->synchronous &&
+       !cfg_sqlite->heap_limit && !cfg_sqlite->foreign_keys &&
+       !cfg_sqlite->encoding){
         ERROR(LOG_SCREEN | LOG_FILE,"Failed to create connection.");
-        return -1;	
+        return (int) -1;	
     }
 
-    if(strcmp(dbms_ini.dbms_name,"sqlite3")!=0){
-        ERROR(LOG_SCREEN | LOG_FILE,"Only SQLite3 is supported.");
-        return -1;
-    }
+    str_url = (char*)calloc(strlen((char*)DEF_URL) + strlen((char*)cfg_sqlite->path) + 128,sizeof(char));
+    sprintf(str_url, DEF_URL, cfg_sqlite->path, cfg_sqlite->synchronous, cfg_sqlite->heap_limit, cfg_sqlite->foreign_keys, cfg_sqlite->encoding);
 
-    str_url = (char*)calloc(strlen((char*)DEF_URL)+strlen((char*)dbms_ini.db_path),sizeof(char));
-    sprintf(str_url, DEF_URL, dbms_ini.db_path);
     url  = URL_new(str_url);
     pool = ConnectionPool_new(url);
     ConnectionPool_start(pool);
     ret = db_prepare();
     
-    INFO(LOG_SCREEN,"Connection to %s server is established.",dbms_ini.dbms_name);
-    return ret;
+    INFO(LOG_SCREEN,"Connection to SQLite3 DB is established.");
+    return (int) ret;
 }
 
 int db_close(void){

@@ -17,7 +17,7 @@
 /**
  * Count the number of occurences to 'occurence' in input string 'str_in'
  */
-int count_occurence_in_string(char *str_in, char *occurence){
+inline int count_occurence_in_string(char *str_in, char *occurence){
     char  *p  = str_in;
     int cpt = 0;
 
@@ -35,7 +35,7 @@ int count_occurence_in_string(char *str_in, char *occurence){
 /**
  * Split a string by string
  */
-char** explode(char *str_in, char *cutter){
+inline char** explode(char *str_in, char *cutter){
     int nb_occur = count_occurence_in_string(str_in, cutter);
     
     if(nb_occur>0){
@@ -66,8 +66,7 @@ char** explode(char *str_in, char *cutter){
     return (char**)NULL;
 }
 
-
-int  implode(char **p_p_str_in, char *glue, char **str_out){
+inline int  implode(char **p_p_str_in, char *glue, char **str_out){
   if(p_p_str_in && str_out && *str_out == NULL && glue){
     int size_str_out = 0;
     int i = 0;
@@ -94,7 +93,7 @@ int  implode(char **p_p_str_in, char *glue, char **str_out){
   return (int) -1;
 }
 
-void del_occurrence(char* str_in, int cpt, ...){
+inline void del_occurrence(char* str_in, int cpt, ...){
     char* parametre = NULL;
     int   i = 0;
     va_list ap;
@@ -110,5 +109,116 @@ void del_occurrence(char* str_in, int cpt, ...){
     }
     va_end(ap);
 }
+
+/**
+ * This function is used for strupper and strlower
+ */
+static inline int _strxer(const char *str_in, char **str_out, int (*f_char)(int c)){
+    if(str_out && str_in){
+        int i = 0;
+        if(!(*str_out)){
+            *str_out = (char*)calloc(strlen(str_in)+1, sizeof(char));
+        }//TODO: else len(str_out) < strlen(str_in) => return -1
+        while(str_in[i]){
+            (*str_out)[i] = (char)f_char((int)str_in[i]);
+            i++;
+        }
+        return (int) 0;
+    }
+    return (int) -1;
+}
+
+inline void strupper(char **str_out, const char *str_in){
+    _strxer(str_in, str_out, toupper);
+    return;
+}
+
+inline void strlower(char **str_out, const char *str_in){
+    _strxer(str_in, str_out, tolower);
+    return;
+}
+
+inline int strlistcmp(char *buffer, size_t buffer_len, size_t max, char **str_propose){
+    if(buffer &&
+        (!max || (max <= buffer_len && strlen(buffer) <= max)))
+    {
+        if(str_propose){
+            int i = 0;
+            while(str_propose + i){
+                if(strcmp(*(str_propose + i), buffer) == 0){
+                   return (int) i;
+                }
+                i++;
+            }
+        }
+    }
+    return (int) -1;
+}
+
+inline int isnumber(const char *str_in){
+    if(str_in){
+        int flags = 0; // 0x01 => is number positif | 0x02 => is double positif | 0x04 => is negatif
+        unsigned int len = strlen(str_in);
+        unsigned int i = 0;
+        if(*(str_in + 0) == '-'){
+            flags |= 0x04;
+            i++;
+        }
+        while(i < len){
+            if(isdigit(*(str_in+i))){
+                flags |= 0x01;
+                i++;
+            }else if((*(str_in + i) == '.' || *(str_in + i) == ',') && (flags & 0x02) == 0){
+                flags |= 0x02;
+                i++;
+            }else{
+                break;
+            }
+        }
+        if(flags & 0x01){
+            return (int) flags;
+        }
+    }
+    return (int) -1;
+}
+
+inline int strtoi(int *out, const char *str_in){
+    if(str_in && out && isnumber(str_in)){
+        *out = atoi(str_in);
+        return (int) 0;
+    }
+    return (int) -1;
+}
+
+#define STR_FALSE    "FALSE"
+#define STR_TRUE     "TRUE"
+#define STR_OFF      "OFF"
+#define STR_ON       "ON"
+#define STR_NO       "NO"
+#define STR_YES      "YES"
+inline int strtob(bool *out, const char *buffer){
+    char *str_cmp = NULL;
+    if(!out && buffer){
+        return (int) -1;
+    }
+    strupper(&str_cmp, buffer);
+    if(strcmp(str_cmp, STR_TRUE) == 0 || strcmp(str_cmp, STR_ON) || strcmp(str_cmp, STR_YES)){
+        *out = true;
+    }else if(strcmp(str_cmp, STR_FALSE) == 0 || strcmp(str_cmp, STR_OFF) == 0 || strcmp(str_cmp, STR_NO) == 0){
+        *out = false;
+    }else{
+        free(str_cmp);
+        return (int) -1;
+    }
+    free(str_cmp);
+    return (int) 0;
+}
+#undef STR_FALSE
+#undef STR_TRUE
+#undef STR_OFF
+#undef STR_ON
+#undef STR_NO
+#undef STR_YES
+
 
 

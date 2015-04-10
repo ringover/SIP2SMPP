@@ -75,6 +75,7 @@ Loglevel log_get_display(void);
 int  log_init(const char *path,const void *p_function);
 int  log_destroy(void);
 int  log_change_file(const char *path);
+int str_to_loglevel(const char *name);
 
 void log_hook(Loglevel lvl, unsigned int display,pthread_t tid,pid_t pid, const char* func, const char* file, unsigned int line, const char* buff);
 

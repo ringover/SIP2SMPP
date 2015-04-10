@@ -24,7 +24,11 @@
 
 #include "log/log.h"
 #include "type_projet.h"
-#include "ini/iniFile.h"
+//INI FILE
+//#include "ini/iniFile.h"
+#include "config/config.h"
+#include "config/struct.h"
+#include "config/struct_display.h"
 
 /**
  * Function DB

@@ -23,6 +23,34 @@ char* str_loglevel[]={
 	LOG_ALERT_STR
 };
 
+int str_to_loglevel(const char *name){
+    if(strncmp(name, LOG_CONSOLE_STR, 7) == 0){
+        return (int) LOG_CONSOLE;
+    }
+    if(strncmp(name, LOG_DEBUG_STR, 5) == 0){
+        return (int) LOG_DEBUG;
+    }
+    if(strncmp(name, LOG_INFO_STR, 4) == 0){
+        return (int) LOG_INFO;
+    }
+    if(strncmp(name, LOG_NOTICE_STR, 6) == 0){
+        return (int) LOG_NOTICE;
+    }
+    if(strncmp(name, LOG_WARNING_STR, 7) == 0){
+        return (int) LOG_WARNING;
+    }
+    if(strncmp(name, LOG_ERROR_STR, 5) == 0){
+        return (int) LOG_ERROR;
+    }
+    if(strncmp(name, LOG_CRIT_STR, 4) == 0){
+        return (int) LOG_CRIT;
+    }
+    if(strncmp(name, LOG_ALERT_STR, 5) == 0){
+        return (int) LOG_ALERT;
+    }
+    return (int) 0;
+}
+
 /**
  * \brief	This function allow to init LOG_SCREEN function.
  * 

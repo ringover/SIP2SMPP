@@ -2,7 +2,7 @@ include ../Makefile.defs
 
 CONFIG_OBJ = ../OBJ
 
-subdirs = daemonize ini log net linked_list threadpool 
+subdirs = daemonize config log net linked_list threadpool 
 
 SRC = $(wildcard *.c*)
 OBJ += $(SRC:.c=.o) $(SRC:.cpp=.o)

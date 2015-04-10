@@ -33,7 +33,10 @@
 #include "net/sip/sip.h"
 #include "sip_io.h"
 //INI FILE
-#include "ini/iniFile.h"
+//#include "ini/iniFile.h"
+#include "config/config.h"
+#include "config/struct.h"
+#include "config/struct_display.h"
 //LOG
 #include "log/log.h"
 //OTHER
@@ -193,8 +196,9 @@ int main(int argc,char **argv){
         handler(-1);
     }
 
-    if(!load_file_ini((uint8_t*)conffile,SECTION_ALL)){
+    if(load_config_file((uint8_t*)conffile, CONFIG_ALL, NULL) == -1){
         ERROR(LOG_FILE | LOG_SCREEN,"There are errors in the INI file!");
+        free_config_file(CONFIG_ALL, NULL);
         handler(-1);
     }
 
@@ -207,44 +211,29 @@ int main(int argc,char **argv){
         ERROR(LOG_FILE | LOG_SCREEN,"There are errors when the DB connection!");
         handler(-1);
     }else{
-        //db_select_sms_count(PENDING, &count_sms);
+        //TODO: send sms save in db
     }
 
     if(start_routing() != 0){
         ERROR(LOG_FILE | LOG_SCREEN, "Routing loading failed");
     }
 
-    printf("%sVersion          %s: [%s]\n", GREEN, END_COLOR, VERSION);
-    printf("%sPid file         %s: [%s]\n", GREEN, END_COLOR, pid_file);
-    printf("-------     %s     -------\n" , conffile);
-    printf("%sSIP remote name  %s: [%s]\n", GREEN, END_COLOR, sip_remote_ini.interface_name);
-    printf("%sSIP remote IP    %s: [%s]\n", GREEN, END_COLOR, sip_remote_ini.sip_ip);
-    printf("%sSIP remote Port  %s: [%d]\n", GREEN, END_COLOR, sip_remote_ini.sip_port);
-    printf("%sSIP remote model %s: [%d]\n", GREEN, END_COLOR, sip_remote_ini.model);
-    printf("%sSIP host name    %s: [%s]\n", GREEN, END_COLOR, sip_host_ini.interface_name);
-    printf("%sSIP host IP      %s: [%s]\n", GREEN, END_COLOR, sip_host_ini.sip_ip);
-    printf("%sSIP host Port    %s: [%d]\n", GREEN, END_COLOR, sip_host_ini.sip_port);
-    printf("%sSIP host model   %s: [%d]\n", GREEN, END_COLOR, sip_host_ini.model);
-    printf("\n");
-    printf("%sSMPP name        %s: [%s]\n", GREEN, END_COLOR, smpp_ini.interface_name);
-    printf("%sSMPP IP          %s: [%s]\n", GREEN, END_COLOR, smpp_ini.smpp_ip);
-    printf("%sSMPP Port        %s: [%d]\n", GREEN, END_COLOR, smpp_ini.smpp_port);
-    printf("%sSMPP model       %s: [%d]\n", GREEN, END_COLOR, smpp_ini.model);
-//    printf("%sCommand ID       %s: [%s]\n", GREEN, END_COLOR, type_bind_smpp_enum_to_str((type_bind_smpp_enum)smpp_ini.command_id));
-    printf("%sSystem Type      %s: [%s]\n", GREEN, END_COLOR, smpp_ini.system_type);
-    printf("%sTON src          %s: [%d]\n", GREEN, END_COLOR, smpp_ini.ton_src);
-    printf("%sTON dst          %s: [%d]\n", GREEN, END_COLOR, smpp_ini.ton_dst);
-    printf("%sNPI src          %s: [%d]\n", GREEN, END_COLOR, smpp_ini.npi_src);
-    printf("%sNPI dst          %s: [%d]\n", GREEN, END_COLOR, smpp_ini.npi_dst);
-    printf("\n");
-    printf("%sDBMS             %s: [%s]\n", GREEN, END_COLOR, dbms_ini.dbms_name);
-    printf("%sDB path          %s: [%s]\n", GREEN, END_COLOR, dbms_ini.db_path);
+    if(cfg_main && cfg_main->launch_msg){
+        printf("\033[0;36m%s\033[0m\n", cfg_main->launch_msg);
+    }
+    printf("SIP 2 SMPP Version  [%s]\n", VERSION);
+    printf("Pid file            [%s]\n", pid_file);
+    printf("Config File         [%s]\n", conffile);
 
+    display_config_file(CONFIG_ALL, NULL);
+
+/*
     p_sip_socket  = new_sip_socket_t();
     init_sip_socket_t(p_sip_socket, sip_host_ini.interface_name, sip_host_ini.sip_ip, (unsigned int)sip_host_ini.sip_port);
 
     p_smpp_socket = new_smpp_socket_t();
-    init_smpp_socket_t(p_smpp_socket, smpp_ini.interface_name, NULL, 0, smpp_ini.smpp_ip, (unsigned int)smpp_ini.smpp_port, smpp_ini.user_smpp, smpp_ini.pass_smpp, /*smpp_ini.command_id*/BIND_TRANSCEIVER, smpp_ini.system_type, smpp_ini.ton_src, smpp_ini.npi_src, smpp_ini.ton_dst, smpp_ini.npi_dst);
+    init_smpp_socket_t(p_smpp_socket, smpp_ini.interface_name, NULL, 0, smpp_ini.smpp_ip, (unsigned int)smpp_ini.smpp_port, smpp_ini.user_smpp, smpp_ini.pass_smpp, BIND_TRANSCEIVER, smpp_ini.system_type, smpp_ini.ton_src, smpp_ini.npi_src, smpp_ini.ton_dst, smpp_ini.npi_dst);
+//    init_smpp_socket_t(p_smpp_socket, smpp_ini.interface_name, NULL, 0, smpp_ini.smpp_ip, (unsigned int)smpp_ini.smpp_port, smpp_ini.user_smpp, smpp_ini.pass_smpp, smpp_ini.command_id, smpp_ini.system_type, smpp_ini.ton_src, smpp_ini.npi_src, smpp_ini.ton_dst, smpp_ini.npi_dst);
     
     map_set(map_iface_sip, sip_host_ini.interface_name, p_sip_socket);
     map_set(map_iface_smpp, smpp_ini.interface_name, p_smpp_socket);
@@ -258,9 +247,9 @@ int main(int argc,char **argv){
    
     pthread_join(listen_sip,NULL);
     pthread_join(listen_smpp,NULL);
-
+*/
     threadpool_destroy(p_threadpool, threadpool_graceful);
-    free_file_ini(SECTION_ALL);
+    free_config_file(CONFIG_ALL, NULL);
     close_routing();
     handler(0);
     return 0;

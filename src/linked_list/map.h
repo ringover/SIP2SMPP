@@ -18,7 +18,7 @@
 #ifndef _KEY_
 #define _KEY_
 	typedef void(*free_key)(void**);
-	typedef void*(*copy_key)(void*);
+	typedef void*(*copy_key)(const void*);
 	typedef int(*compare_key)(const void*, const void*);
 #endif
 
