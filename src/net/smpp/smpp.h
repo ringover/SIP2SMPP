@@ -20,11 +20,51 @@ extern "C"{
 #include "./libsmpp34/smpp34_structs.h"
 #include "./libsmpp34/smpp34_params.h"
 
-#include "../net_struct.h"
+#include "../net.h"
 #include "../tcp/tcp.h"
 
 #include "../../log/log.h"
 
+/////////////////////////////////////////
+
+#define STR_BIND_TRANSCEIVER        "TRANSCEIVER"
+#define STR_BIND_RECEIVER           "RECEIVER"
+#define STR_BIND_TRANSMITTER        "TRANSMITTER"
+
+#define STR_TON_Unknown             "UNKNOWN"
+#define STR_TON_International       "INTERNATIONAL"
+#define STR_TON_National            "NATIONAL"
+#define STR_TON_Network_Specific    "NETWORK_SPECIFIC"
+#define STR_TON_Subscriber_Number   "SUBSCRIBER_NUMBER"
+#define STR_TON_Alphanumeric        "ALPHANUMERIC"
+#define STR_TON_Abbreviated         "ABBREVIATED"
+
+#define STR_NPI_Unknown             "UNKNOWN"
+#define STR_NPI_ISDN_E163_E164      "ISDN_E163_E164"
+#define STR_NPI_Data_X121           "DATA_X121"
+#define STR_NPI_Telex_F69           "TELEX_F69"
+#define STR_NPI_Land_Mobile_E212    "LAND_MOBILE_E212"
+#define STR_NPI_National            "NATIONAL"
+#define STR_NPI_Private             "PRIVATE"
+#define STR_NPI_ERMES               "ERMES"
+#define STR_NPI_Internet_IP         "INTERNET_IP"
+#define STR_NPI_WAP_Client_Id       "WAP_CLIENT_ID"
+
+/////////////////////////////////////////
+////                                /////
+////   Short Message Peer-to-Peer   /////
+////              TOOLS             /////
+////                                /////
+/////////////////////////////////////////
+
+inline const char* bind_to_str(int i);
+inline int str_to_bind(const char *str);
+
+inline const char* npi_to_str(int i);
+inline int str_to_npi(const char *str);
+
+inline const char* ton_to_str(int i);
+inline int str_to_ton(const char *str);
 
 /////////////////////////////////////////
 ////                                /////

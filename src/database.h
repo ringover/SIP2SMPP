@@ -10,25 +10,47 @@
 #include <sys/time.h>
 #include <math.h>
 
-
+//Lib ZDB
 #include "zdb/URL.h"
 #include "zdb/ResultSet.h"
 #include "zdb/PreparedStatement.h"
 #include "zdb/Connection.h"
 #include "zdb/ConnectionPool.h"
 #include "zdb/SQLException.h"
-
 //#include <zdb/Exception.h>
 //#include <zdb/SQLException.h>
 //#include <zdb/zdb.h>
 
+//LOG
 #include "log/log.h"
-#include "type_projet.h"
+
+//Linked List - MAP
+#include "linked_list/map.h"
+
 //INI FILE
-//#include "ini/iniFile.h"
 #include "config/config.h"
-#include "config/struct.h"
-#include "config/struct_display.h"
+
+//Other
+#include "type_projet.h"
+
+/**
+ * config SQLite3
+ */
+
+typedef struct _config_sqlite{
+    char         *path;           //SQLite3
+    char         *encoding;       //default : UTF-8
+    char         *synchronous;     //default : normal 
+    unsigned long heap_limit;      //default : 8290304 Ko 
+    char         *foreign_keys;    //default : on 
+} config_sqlite_t;
+#define new_config_sqlite()   (config_sqlite_t*)calloc(1, sizeof(config_sqlite_t))
+
+inline void destroy_config_sqlite(config_sqlite_t *sqlite);
+void free_config_sqlite(void **sqlite);
+inline void display_config_sqlite(config_sqlite_t *sqlite);
+
+extern config_sqlite_t  *cfg_sqlite;
 
 /**
  * Function DB

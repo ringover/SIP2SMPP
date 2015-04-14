@@ -5,6 +5,10 @@
 #include <stdio.h>
 #include <string.h>
 
+void free_uli(void **data);
+void* copy_uli(const void *data);
+long int compare_uli(const void *data1, const void *data2);
+
 ///////////////////////
 // uint32 (unsigned int)
 /////

@@ -74,7 +74,7 @@ int main(){
     log2display(LOG_ALERT);
     log_init("logFile",NULL);
     memset(buffer, 0, 2048);
-    sock = new_socket_t();
+    sock = new_socket();
     smpp_send_bind_server(sock, "0.0.0.0", 2780);
     sock->socket = smpp_wait_client(sock, &ip_remote, &port_remote);
 

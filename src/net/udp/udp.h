@@ -20,7 +20,7 @@ extern "C" {
 #include <pthread.h>
 #include <unistd.h>
 
-#include "../net_struct.h"
+#include "../net.h"
 #include "../../log/log.h"
 
 int udp_socket(socket_t *sock, unsigned char *ip_host, unsigned int port_host);

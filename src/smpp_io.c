@@ -14,7 +14,6 @@
 #endif /*_strncpy*/
 
 map *map_session_smpp;//<uint(sequence_number), smpp_data_t>
-map *map_iface_smpp;  //<str(name_interface), sip_socket_t>
 
 ///////////////////////
 // SMPP Session struct
@@ -47,124 +46,165 @@ void free_smpp_session(void **data){
 // SMPP Socket struct
 //////
 
-void init_smpp_socket_t(smpp_socket_t *p_smpp_socket, unsigned char *interface_name, unsigned char *ip_host, unsigned int port_host, unsigned char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, int bind, unsigned char *system_type, int ton_src, int npi_src, int ton_dst, int npi_dst){
-    if(p_smpp_socket){
-        if(interface_name){
-            _strcpy(p_smpp_socket->interface, interface_name);
-        }
+map  *cfg_smpp; // <str, config_smpp_t>
 
-        p_smpp_socket->status = SMPP_DISCONNECT;
+inline void destroy_config_client_smpp(config_client_smpp_t *c_smpp){
+    if(c_smpp->name)
+        free(c_smpp->name);
+    //c_smpp->name  = NULL;
+    //c_smpp->model = MODE_CLIENT;
+    if(c_smpp->ip)
+        free(c_smpp->ip);
+    //c_smpp->ip = NULL;
+    //c_smpp->port = 0;
+    if(c_smpp->system_id)
+        free(c_smpp->system_id);
+    //c_smpp->system_id = NULL;
+    if(c_smpp->password)
+        free(c_smpp->password);
+    //c_smpp->password = NULL;
+    //c_smpp->ton = 0;
+    //c_smpp->npi = 0;
+    if(c_smpp->routing_to)
+        free(c_smpp->routing_to);
+    //c_smpp->routing_to = NULL;
+    memset(c_smpp, 0, sizeof(config_client_smpp_t));
+    return;
+}
 
-        if(bind > 0){    
-            p_smpp_socket->bind = bind;
-        }
+inline void destroy_config_smpp(config_smpp_t *smpp){
+    if(smpp->name)
+        free(smpp->name);
+    //smpp->name  = NULL;
+    //smpp->model = MODEL_CLIENT;
+    if(smpp->ip)
+        free(smpp->ip);
+    //smpp->ip = NULL;
+    //smpp->port = 0;
+    if(smpp->system_id)
+        free(smpp->system_id);
+    //smpp->system_id = NULL;
+    if(smpp->password)
+        free(smpp->password);
+    //smpp->password = NULL;
+    //smpp->npi_src = 0;
+    //smpp->ton_src = 0;
+    //smpp->npi_dst = 0;
+    //smpp->npi_dst = 0;
+    if(smpp->system_type)
+        free(smpp->system_type);
+    if(smpp->service_type)
+        free(smpp->service_type);
+    //smpp->system_type = NULL;
+    //smpp->cillabd_id = 0;
+    if(smpp->routing_to)
+        free(smpp->routing_to);
+    //smpp->routing_to = NULL;
+    if(smpp->list_c_smpp)
+        map_destroy(&smpp->list_c_smpp);
+    memset(smpp, 0, sizeof(config_smpp_t));
+    return;
+}
 
-        if(p_smpp_socket->sock == NULL){
-            p_smpp_socket->sock = new_socket_t();
-        }
+void free_config_client_smpp(void **c_smpp){
+    destroy_config_client_smpp((config_client_smpp_t*)*c_smpp);
+    free(*c_smpp);
+    *c_smpp = NULL;
+    return;
+}
 
-        if(ip_host){
-            _strcpy(p_smpp_socket->sock->ip, ip_host);
-        }
+void free_config_smpp(void **smpp){
+    destroy_config_smpp((config_smpp_t*)*smpp);
+    free(*smpp);
+    *smpp = NULL;
+    return;
+}
 
-        if(port_host > 0){
-            p_smpp_socket->sock->port = port_host;
-        }
+int compare_config_client_smpp(const void *c_smpp1, const void *c_smpp2){
+    config_client_smpp_t *s1 = (config_client_smpp_t*)c_smpp1;
+    config_client_smpp_t *s2 = (config_client_smpp_t*)c_smpp2;
+    return (int) strcmp(s1->name, s2->name);
+}
 
-        if(ip_remote){
-            _strcpy(p_smpp_socket->ip_remote, ip_remote);
-        }
-        if(port_remote > 0){
-            p_smpp_socket->port_remote = port_remote;
-        }
+int compare_config_smpp(const void *smpp1, const void *smpp2){
+    config_smpp_t *s1 = (config_smpp_t*)smpp1;
+    config_smpp_t *s2 = (config_smpp_t*)smpp2;
+    return (int) strcmp(s1->name, s2->name);
+}
 
-        //user = 16 chars max
-        if(user && strlen(user) <= 16){
-            _strcpy(p_smpp_socket->user, user);
-        }else{
-            ERROR(LOG_SCREEN | LOG_FILE, "user SMPP <= 16");
-        }
-
-        //passwd = 9 chars max
-        if(passwd && strlen(passwd) <= 9){
-            _strcpy(p_smpp_socket->passwd, passwd);
-        }else{
-            ERROR(LOG_SCREEN | LOG_FILE, "passwd SMPP <= 9");
-        }
-
-        //system_type = 13 chars max
-        if(system_type && strlen(system_type) <= 13){
-            _strcpy(p_smpp_socket->system_type, system_type);
-        }else{
-            ERROR(LOG_SCREEN | LOG_FILE, "system_type SMPP <= 13");
-        }
-
-        p_smpp_socket->ton_src = ton_src;
-
-        p_smpp_socket->npi_src = npi_src;
-
-        p_smpp_socket->ton_dst = ton_dst;
-
-        p_smpp_socket->npi_dst = npi_dst;
+inline void display_config_client_smpp(config_client_smpp_t *c_smpp){
+    if(c_smpp){
+        char buffer[2048] = { 0 };
+        sprintf(buffer, "[%s]\n"
+                        STR_IP"         : %s\n"
+                        STR_PORT"       : %d\n"
+                        STR_SYSTEM_ID"  : %s\n"
+                        STR_PASSWORD"   : %s\n"
+                        STR_ROUTING_TO" : %s\n",
+                c_smpp->name,
+                c_smpp->ip,
+                c_smpp->port,
+                c_smpp->system_id,
+                c_smpp->password,
+                c_smpp->routing_to);
+        DEBUG(LOG_SCREEN, "\n%s", buffer)
     }
     return;
 }
 
-inline void free_smpp_socket(void **p_p_data){
-    if(p_p_data && *p_p_data){
-        smpp_socket_t *p_smpp_sock = (smpp_socket_t*)*p_p_data;
-
-        if(p_smpp_sock->interface){
-            free(p_smpp_sock->interface);
+inline void display_config_smpp(config_smpp_t *smpp){
+    if(smpp){
+        char buffer[2048] = { 0 };
+        sprintf(buffer, "[%s]\n"
+                        STR_MODEL"       : %s\n"
+                        STR_IP"          : %s\n"
+                        STR_PORT"        : %d\n"
+                        STR_SYSTEM_ID"   : %s\n"
+                        STR_PASSWORD"    : %s\n"
+                        STR_NPI" : %s\n"
+                        STR_TON"         : %s\n"
+                        STR_SYSTEM_TYPE" : %s\n"
+                        STR_BIND"        : %s\n"
+                        STR_ROUTING_TO"  : %s\n",
+                smpp->name,
+                str_model[smpp->model],
+                smpp->ip,
+                smpp->port,
+                smpp->system_id,
+                smpp->password,
+                npi_to_str(smpp->npi),
+                ton_to_str(smpp->ton),
+                smpp->system_type,
+                bind_to_str(smpp->command_id),
+                smpp->routing_to);
+        DEBUG(LOG_SCREEN, "\n%s", buffer)
+        if(smpp->list_c_smpp){
+            //list clients
+            iterator_map *p_it = smpp->list_c_smpp->begin;
+            while(p_it){
+                display_config_client_smpp((config_client_smpp_t*)p_it->value);
+                p_it = p_it->next;
+            }
         }
-
-        if(p_smpp_sock->ip_remote){
-            free(p_smpp_sock->ip_remote);
-        }
-
-        if(p_smpp_sock->user){
-            free(p_smpp_sock->user);
-        }
-
-        if(p_smpp_sock->passwd){
-            free(p_smpp_sock->passwd);
-        }
-
-        if(p_smpp_sock->system_type){
-            free(p_smpp_sock->system_type);
-        }
-
-        tcp_close(p_smpp_sock->sock->socket);
-
-        if(p_smpp_sock->sock->ip){
-            free(p_smpp_sock->sock->ip);
-        }
-
-        free(p_smpp_sock);
-        *p_p_data = NULL;
     }
     return;
 }
 
 //////////////////////////
 
-/**
-*  \brief This function is a constructor to the smpp structure, it allow to initialize a SMPP connection
-*
-*  \param  p_smpp_socket     It is a structure used to connect a SMPP session
-*
-*/
-int smpp_start_connection(smpp_socket_t *p_smpp_socket){
+int smpp_start_connection(config_smpp_t *p_config_smpp){
     int ret = 0;
-    if(p_smpp_socket != NULL && p_smpp_socket->bind > 0 && p_smpp_socket->status == SMPP_DISCONNECT ){
+    if(p_config_smpp != NULL && p_config_smpp->command_id > 0 && p_config_smpp->status == SMPP_DISCONNECT ){
         unsigned int sequence_number = new_uint32();
-        if(smpp_send_bind_client(p_smpp_socket->sock, p_smpp_socket->bind, p_smpp_socket->ip_remote, p_smpp_socket->port_remote,
-                                 p_smpp_socket->user, p_smpp_socket->passwd, p_smpp_socket->system_type, p_smpp_socket->ton_src, p_smpp_socket->npi_src, sequence_number) != -1){
+        if(!p_config_smpp->sock){
+            p_config_smpp->sock = new_socket();
+        }
+        if(smpp_send_bind_client(p_config_smpp->sock, p_config_smpp->command_id, p_config_smpp->ip, p_config_smpp->port, p_config_smpp->system_id, p_config_smpp->password, p_config_smpp->system_type, p_config_smpp->ton, p_config_smpp->npi, sequence_number) != -1){
             //create session
             smpp_session_t *p_session = new_smpp_session_t();
             map_set(map_session_smpp, sequence_number, p_session);
-            p_smpp_socket->status = SMPP_CONNECT;
-            INFO(LOG_SCREEN | LOG_FILE, "Wait SMPP connection of %s:%d", p_smpp_socket->ip_remote, p_smpp_socket->port_remote)
+            p_config_smpp->status = SMPP_CONNECT;
+            INFO(LOG_SCREEN | LOG_FILE, "Wait SMPP connection of %s:%d", p_config_smpp->ip, p_config_smpp->port)
         }else{
             free(sequence_number);
         }
@@ -173,32 +213,21 @@ int smpp_start_connection(smpp_socket_t *p_smpp_socket){
     return (int) -1;
 }
 
-/**
-*  \brief This function is used for disconnect the smpp socket
-*
-*  \param p_smpp_socket   This parameter is the SMPP socket structure
-*
-*/
-int smpp_end_connection(smpp_socket_t *p_smpp_socket){
-    if(p_smpp_socket && p_smpp_socket->status == SMPP_CONNECT){
-        //TODO: smpp_send_unbind(p_smpp_socket->sock,);
-        tcp_close(p_smpp_socket->sock);
-        p_smpp_socket->status = SMPP_DISCONNECT;
+int smpp_end_connection(config_smpp_t *p_config_smpp){
+    if(p_config_smpp && p_config_smpp->status == SMPP_CONNECT && p_config_smpp->sock){
+        //TODO: smpp_send_unbind(p_config_smpp->sock,);
+        tcp_close(p_config_smpp->sock);
+        p_config_smpp->status = SMPP_DISCONNECT;
+        free(p_config_smpp->sock);
         return (int) 0;
     }
     INFO(LOG_SCREEN | LOG_FILE,"smpp already disconnect")
     return (int) -1;
 }
 
-/**
-*  \brief This function is used for restart the smpp socket
-*
-*  \param p_smpp_socket   This parameter is the SMPP socket structure
-*
-*/
-int smpp_restart_connection(smpp_socket_t *p_smpp_socket){
-    smpp_end_connection(p_smpp_socket->sock);
-    return (int) smpp_start_connection(p_smpp_socket->sock);
+int smpp_restart_connection(config_smpp_t *p_config_smpp){
+    int ret = smpp_end_connection(p_config_smpp->sock);
+    return (int) (ret == -1 ? -1 : smpp_start_connection(p_config_smpp->sock));
 }
 
 ////////////////////////////
@@ -332,10 +361,6 @@ int smpp_recv_processing_request(socket_t *sock, const void *req){
     return (int) ret;
 }
 
-/*
-                p_sip->status_code = 202; \
-                _strcpy(p_sip->reason_phrase, ACCEPTED_STR); \
-*/
 #define smpp_response_sm(data, p_session) \
     /*Get original message*/ \
     switch(p_session->p_sm->type){ \
@@ -426,27 +451,27 @@ int smpp_recv_processing_response(void *res){
 
 static void* smpp_recv_processing(void *data){
     void **all_data = (void**)data;
-    smpp_socket_t *smpp_sock = (smpp_socket_t*)all_data[1];
+    config_smpp_t *p_config_smpp = (config_smpp_t*)all_data[1];
     if(DELIVER_SM == ((generic_nack_t*)all_data[0])->command_id  || SUBMIT_SM == ((generic_nack_t*)all_data[0])->command_id){//REQUEST : SUBMIT or DELIVER
-        return smpp_recv_processing_request_sm(smpp_sock->sock, smpp_sock->interface, smpp_sock->ip_remote, smpp_sock->port_remote, all_data[0]);
+        return (void* )smpp_recv_processing_request_sm(p_config_smpp->sock, p_config_smpp->name, p_config_smpp->ip, p_config_smpp->port, all_data[0]);
     }else if(((generic_nack_t*)all_data[0])->command_id & GENERIC_NACK){//RESPONSE
-        return smpp_recv_processing_response(all_data[0]);
+        return (void*) smpp_recv_processing_response(all_data[0]);
     }else{//REQUEST
-        return smpp_recv_processing_request(smpp_sock->sock, all_data[0]);
+        return (void*) smpp_recv_processing_request(p_config_smpp->sock, all_data[0]);
     }
     free(all_data);
-    return -1;
+    return (void*) -1;
 }
 
-int smpp_engine(smpp_socket_t *p_smpp_sock){
+int smpp_engine(config_smpp_t *p_config_smpp){
     int   ret  = -1;
     void **data = NULL;
     void *data_smpp = NULL;
 
-    if((ret = smpp_scan_sock(p_smpp_sock->sock, &data_smpp)) != -1){
+    if((ret = smpp_scan_sock(p_config_smpp->sock, &data_smpp)) != -1){
         data = (void**)calloc(3, sizeof(void*));
         data[0] = data_smpp;
-        data[1] = p_smpp_sock;
+        data[1] = p_config_smpp;
         threadpool_add(p_threadpool, smpp_recv_processing, data, 0);
     }
     return (int) ret;
@@ -459,9 +484,9 @@ int smpp_engine(smpp_socket_t *p_smpp_sock){
 
 int send_sms_to_client_smpp(unsigned char* interface_name, sm_data_t *p_sm){
     int ret = -1;
-    smpp_socket_t  *p_sock = map_get(map_iface_smpp, interface_name);
+    config_smpp_t  *p_config_smpp = map_get(cfg_smpp, interface_name);
     //create session + send submit_sm_t
-    if(p_sock && (p_sock->bind == BIND_TRANSMITTER || p_sock->bind == BIND_TRANSCEIVER) && p_sm){
+    if(p_config_smpp && (p_config_smpp->command_id == BIND_TRANSMITTER || p_config_smpp->command_id == BIND_TRANSCEIVER) && p_sm){
         unsigned int *k_sequence_number = new_uint32();
         smpp_session_t *v_session = new_smpp_session_t();
         generic_nack_t *gen = (generic_nack_t*)calloc(1, sizeof(generic_nack_t));
@@ -472,7 +497,7 @@ int send_sms_to_client_smpp(unsigned char* interface_name, sm_data_t *p_sm){
         v_session->p_msg_smpp = gen;
         v_session->p_sm = p_sm;
         map_set(map_session_smpp, k_sequence_number, v_session);
-        ret = smpp_send_submit_sm(p_sock->sock, p_sm->src, p_sm->dst, p_sm->msg, &(gen->sequence_number), p_sock->ton_src, p_sock->npi_src, p_sock->ton_dst, p_sock->npi_dst);
+        ret = smpp_send_submit_sm(p_config_smpp->sock, p_sm->src, p_sm->dst, p_sm->msg, &(gen->sequence_number), p_config_smpp->ton, p_config_smpp->npi, p_config_smpp->ton, p_config_smpp->npi);
     }
     return (int) ret;
 }

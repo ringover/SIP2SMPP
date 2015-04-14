@@ -8,14 +8,18 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "struct.h"
-#include "minIni/minIni.h"
+#include "../net/net.h"
+#include "../smpp_io.h"
+#include "../sip_io.h"
+#include "../database.h"
+
 #include "../log/log.h"
 #include "../type_projet.h"
 #include "../linked_list/map.h"
 #include "../linked_list/keys.h"
 #include "../str.h"
 
+#define STR_LIST_DELIMITER  ","
 
 //Title
 #define STR_MAIN            "main"
@@ -53,12 +57,34 @@
 //TODO : SIGTRAN
 //...
 
-extern config_main_t       *cfg_main;
-extern config_sqlite_t     *cfg_sqlite;
-extern map                 *cfg_sip;  // <str, config_sip_t>
-extern map                 *cfg_smpp; // <str, config_smpp_t>
+typedef enum _enum_config_load{
+    CONFIG_MAIN     = 0x01,
+    CONFIG_SQLITE   = 0x02,
+    CONFIG_SIP      = 0x04,
+    CONFIG_SMPP     = 0x08, 
+    CONFIG_SIGTRAN  = 0x10, //TODO
+    CONFIG_ALL      = 0xFF
+} enum_config_load_t;
 
+//CONFIG Main
+typedef struct _config_main{
+    char    log_level;
+    char    *launch_msg;
+    bool    fork;
+    char    *routing_module;
+} config_main_t;
+#define new_config_main()   (config_main_t*)calloc(1, sizeof(config_main_t))
+
+extern config_main_t  *cfg_main;
+
+inline void destroy_config_main(config_main_t *main);
+void free_config_main(void **main);
+inline void display_config_main(config_main_t *main);
+
+//LOAD/FREE/DISPLAY config file
 int load_config_file(char *path_file, enum_config_load_t flags, const char *name);
+void free_config_file(enum_config_load_t flags, const char *name);
+void display_config_file(enum_config_load_t flags, const char *name);
 
 #endif /* CONFIG_FILE_H */
 

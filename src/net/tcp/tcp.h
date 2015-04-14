@@ -19,7 +19,7 @@ extern "C"{
 #include <errno.h>
 
 #include "../../str.h"
-#include "../net_struct.h"
+#include "../net.h"
 #include "../../log/log.h"
 
 inline int do_tcp_send(socket_t *sock, unsigned char *buffer, size_t buffer_len, int flag);

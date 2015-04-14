@@ -9,7 +9,7 @@
 #include "linked_list/map.h"
 #include "linked_list/keys.h"
 
-#include "net/net_struct.h"
+#include "net/net.h"
 
 extern map *map_sm;  //<uint32(id_sm), sm_data_t>
 

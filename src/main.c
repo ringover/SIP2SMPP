@@ -23,9 +23,9 @@
 #include <semaphore.h>
 //MAP & LIST
 #include "linked_list/map.h"
+#include "linked_list/keys.h"
 //Thread Pool
 #include "threadpool/threadpool.h"
-//#include "linked_list/list.h"
 //SMPP
 #include "net/smpp/smpp.h"
 #include "smpp_io.h"
@@ -33,10 +33,7 @@
 #include "net/sip/sip.h"
 #include "sip_io.h"
 //INI FILE
-//#include "ini/iniFile.h"
 #include "config/config.h"
-#include "config/struct.h"
-#include "config/struct_display.h"
 //LOG
 #include "log/log.h"
 //OTHER
@@ -87,8 +84,8 @@ void usage(int8_t value){
 /**
  *  Init Connection
  */
-sip_socket_t  *p_sip_socket  = NULL;
-smpp_socket_t *p_smpp_socket = NULL;
+config_sip_t  *p_config_sip  = NULL;
+config_smpp_t *p_config_smpp = NULL;
 
 /**
 *  Thread SMPP
@@ -100,7 +97,7 @@ pthread_t listen_smpp;
 *  \brief This function is used for transfer all SMS received to the DB (SMPP->SIP)
 */
 static void* func_listen_smpp(void *data){
-    smpp_socket_t *p_socket = (smpp_socket_t*)data;
+    config_smpp_t *p_socket = (config_smpp_t*)data;
 
     smpp_start_connection(p_socket);
 
@@ -118,7 +115,7 @@ pthread_t listen_sip;
 *  \brief This function is used for transfer all SMS received to the SMS listend FIFO (SIP)
 */
 static void* func_listen_sip(void *data){
-    sip_socket_t *p_socket = (sip_socket_t*)data;
+    config_sip_t *p_socket = (config_sip_t*)data;
 
     sip_start_connection(p_socket);
 
@@ -132,13 +129,73 @@ void init_maps(){
     map_session_sip  = new_map(free_string, NULL, compare_string, free_sip_session,  NULL, NULL);
     //map used for save all sm in transation in memory
     map_sm           = new_map(free_uint32, NULL, compare_uint32, free_sm_data, NULL, NULL);
-    //map used for save all interface client/server
-    map_iface_sip    = new_map(free_string, NULL, compare_string, free_sip_socket, NULL, NULL);
-    map_iface_smpp   = new_map(free_string, NULL, compare_string, free_smpp_socket, NULL, NULL);
 }
 
+void start_all_sockets_interfaces(){
+    iterator_map *p_it = cfg_sip ? cfg_sip->begin : NULL;
+    while(p_it){
+        config_sip_t *p_config_sip = (config_sip_t*)p_it->value;
+        sip_start_connection(p_config_sip);
+        p_it = p_it->next;
+    }
+    p_it = cfg_smpp ? cfg_smpp->begin : NULL;
+    while(p_it){
+        config_smpp_t *p_config_smpp = (config_smpp_t*)p_it->value;
+        smpp_start_connection(p_config_smpp);
+        p_it = p_it->next;
+    }
+    return;
+}
+
+map *m_threads = NULL;
+
+void start_all_threads_interfaces(){
+    if(!m_threads){
+        m_threads = new_map(free_string, NULL, compare_string, free_uli, NULL, compare_uli);
+    }
+    if(cfg_sip){
+        iterator_map *p_it = cfg_sip->begin;
+        while(p_it){
+            config_sip_t *sip = p_it->value;
+            char *name = calloc(sizeof(sip->name)+1, sizeof(char));
+            strcpy(name, sip->name);
+            pthread_t *p_thread = calloc(1, sizeof(pthread_t));
+            pthread_create(p_thread, NULL, func_listen_sip, sip);
+            map_set(m_threads, name, p_thread);
+            p_it = p_it->next;
+        } 
+    }
+    if(cfg_smpp){
+        iterator_map *p_it = cfg_smpp->begin;
+        while(p_it){
+            config_smpp_t *smpp = p_it->value;
+            char *name = calloc(sizeof(smpp->name)+1, sizeof(char));
+            strcpy(name, smpp->name);
+            pthread_t *p_thread = calloc(1, sizeof(pthread_t));
+            pthread_create(p_thread, NULL, func_listen_smpp, smpp);
+            map_set(m_threads, name, p_thread);
+            p_it = p_it->next;
+        } 
+    }
+    return;
+}
+
+void join_all_threads(){
+    if(m_threads){
+        iterator_map *p_it = m_threads->begin;
+        while(p_it){
+            pthread_t *p_thread = p_it->value;
+            pthread_join(*p_thread,NULL);
+            map_erase(m_threads, p_it->key);
+            p_it = m_threads->begin;
+        } 
+    }
+    map_destroy(&m_threads);
+    return;
+} 
+ 
 int main(int argc,char **argv){
-    int c, nofork=1;
+    int c, nofork = 1;
     FILE *file = NULL;
     char *conffile = NULL;
     char str[100];
@@ -211,7 +268,7 @@ int main(int argc,char **argv){
         ERROR(LOG_FILE | LOG_SCREEN,"There are errors when the DB connection!");
         handler(-1);
     }else{
-        //TODO: send sms save in db
+        //TODO: send sms saved in db
     }
 
     if(start_routing() != 0){
@@ -227,30 +284,21 @@ int main(int argc,char **argv){
 
     display_config_file(CONFIG_ALL, NULL);
 
-/*
-    p_sip_socket  = new_sip_socket_t();
-    init_sip_socket_t(p_sip_socket, sip_host_ini.interface_name, sip_host_ini.sip_ip, (unsigned int)sip_host_ini.sip_port);
+    start_all_sockets_interfaces();
 
-    p_smpp_socket = new_smpp_socket_t();
-    init_smpp_socket_t(p_smpp_socket, smpp_ini.interface_name, NULL, 0, smpp_ini.smpp_ip, (unsigned int)smpp_ini.smpp_port, smpp_ini.user_smpp, smpp_ini.pass_smpp, BIND_TRANSCEIVER, smpp_ini.system_type, smpp_ini.ton_src, smpp_ini.npi_src, smpp_ini.ton_dst, smpp_ini.npi_dst);
-//    init_smpp_socket_t(p_smpp_socket, smpp_ini.interface_name, NULL, 0, smpp_ini.smpp_ip, (unsigned int)smpp_ini.smpp_port, smpp_ini.user_smpp, smpp_ini.pass_smpp, smpp_ini.command_id, smpp_ini.system_type, smpp_ini.ton_src, smpp_ini.npi_src, smpp_ini.ton_dst, smpp_ini.npi_dst);
-    
-    map_set(map_iface_sip, sip_host_ini.interface_name, p_sip_socket);
-    map_set(map_iface_smpp, smpp_ini.interface_name, p_smpp_socket);
+    start_all_threads_interfaces();
 
-    if(p_sip_socket){
-        pthread_create(&listen_sip, NULL, func_listen_sip, p_sip_socket);
-    }
-    if(p_smpp_socket){
-        pthread_create(&listen_smpp, NULL, func_listen_smpp, p_smpp_socket);
-    }
-   
-    pthread_join(listen_sip,NULL);
-    pthread_join(listen_smpp,NULL);
-*/
+    join_all_threads();  
+
     threadpool_destroy(p_threadpool, threadpool_graceful);
+
     free_config_file(CONFIG_ALL, NULL);
+
     close_routing();
+
     handler(0);
+
     return 0;
 }
+
+

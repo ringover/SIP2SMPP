@@ -3,42 +3,96 @@
 /////////////////////////////
 #include "routing.h"
 
-/**
- * GLOBAL VARIABLE
- * 
- * MAP<char*,socket> = interface_name -> p_socket (TODO : Map Interfaces with p_(sip/smpp)_socket)
- * count_sms         = SMS number in the DB
- */
-
-//send_sms_to_sip(I_LISTEN_SIP, msisdn_src, msisdn_dst, message, ip_remote, port_remote);
-//send_sms_to_smpp(I_CONNECTION_SMPP, msisdn_src, msisdn_dst, message);
-
-//interface name (cf INI file)
-#define I_CONNECTION_SMPP "SMPP01"
-#define I_LISTEN_SIP      "SIP_H_01"
-
 /////////////////
 // Foreward sample
 /////
 
+inline int route_parser(char *routing_to, char *to, unsigned int *port){
+    if(routing_to && to && port){
+        if(strncmp(routing_to, "sip:", 4) == 0){
+            char *tmp = NULL;
+            routing_to += 4;
+            if((tmp = strchr(routing_to, ':')) != NULL){
+                *port = atoi(tmp+1);
+                strncpy(to, routing_to, tmp-routing_to);
+            }else{
+                strcpy(to, routing_to);
+                *port = 5060;
+            }
+            return (int) I_SIP;
+        }else if(strncmp(routing_to, "smpp:", 5) == 0){
+            routing_to += 5;
+            strcpy(to, routing_to);
+            *port = 0;
+            return (int) I_SMPP;
+        }
+    }
+    return (int) -1;
+}
+
+int routing_to(char *name, char *to, unsigned int *port){
+    if(cfg_smpp){
+        iterator_map *p_it = cfg_smpp->begin;
+        while(p_it){
+            char *key_name = (char*)p_it->key;
+            if(key_name && strcmp(key_name, name) == 0){
+                config_smpp_t *p_config_smpp = (config_smpp_t*)p_it->value;
+                if(p_config_smpp->routing_to){
+                    return (int) route_parser(p_config_smpp->routing_to, to, port);
+                }
+                return (int) -1;
+            }
+            p_it = p_it->next;
+        }
+    }
+    if(cfg_sip){
+        iterator_map *p_it = cfg_sip->begin;
+        while(p_it){
+            char *key_name = (char*)p_it->key;
+            if(key_name && strcmp(key_name, name) == 0){
+                config_sip_t *p_config_sip = (config_sip_t*)p_it->value;
+                if(p_config_sip->routing_to){
+                    return (int) route_parser(p_config_sip->routing_to, to, port);
+                }
+                return (int) -1;
+            }
+            p_it = p_it->next;
+        }
+    }
+    return (int) -1;
+}
+
 int start_routing(){
-    return 0;
+    //default SIP
+    char *name = (char*)calloc(strlen("sip_out") + 1, sizeof(char));
+    config_sip_t *p_config_sip = new_config_sip();
+    p_config_sip->name = (char*)calloc(strlen("sip_out") + 1, sizeof(char));
+    strcpy(p_config_sip->name, "sip_out");
+    strcpy(name, "sip_out");
+    map_set(cfg_sip, name, p_config_sip);
+    return (int) 0;
 }
 
 int routing(const unsigned char *interface_name, const unsigned char *origin_ip, const unsigned int *origin_port, sm_data_t *p_sm){
-    if(strcmp(interface_name, I_CONNECTION_SMPP) == 0){
-        //send to SIP interface
-        return (int) send_sms_to_sip(I_LISTEN_SIP, p_sm, "192.168.0.1", 5090);
-    }else if(strcmp(interface_name, I_LISTEN_SIP) == 0){
-        //send to SMPP interface
-        return (int) send_sms_to_client_smpp(I_CONNECTION_SMPP, p_sm);
+    char to[16] = { 0 };
+    unsigned int port = 0;
+
+    switch(routing_to(interface_name, to, &port)){
+        case I_SMPP : 
+            return (int) send_sms_to_client_smpp(to, p_sm);
+        case I_SIP :
+            return (int) send_sms_to_sip("sip_out", p_sm, to, port);
+        case I_SIGTRAN :
+        default:
+            return (int) -1;
     }
-    ERROR(LOG_SCREEN | LOG_FILE, "Routing gailed");
+
+    ERROR(LOG_SCREEN | LOG_FILE, "Routing failed");
     return (int) -1;
 }
 
 int close_routing(){
-    return 0;
+    return (int) 0;
 }
 
 /// END SCRIPT ROUTING SAMPLE

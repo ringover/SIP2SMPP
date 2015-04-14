@@ -15,6 +15,7 @@
 #include "smpp_io.h"
 
 #include "log/log.h"
+#include "net/net.h"
 #include "net/udp/udp.h"
 #include "sm_struct.h"
 #include "str.h"
@@ -39,28 +40,32 @@ void  free_sip_session(void **data);
 extern map *map_session_sip; //<str(call_id), sip_session_t>
 
 ///////////////////////
-// Used to save socket SIP info
+// Config SIP
 /////
 
-typedef struct _sip_socket_t{
+typedef struct _config_sip{
+    char          *name;          //Interface name
 	  socket_t      *sock;
-    unsigned char *interface_name;
-} sip_socket_t;
-#define new_sip_socket_t()   (sip_socket_t*)calloc(1,sizeof(sip_socket_t))
+    char          *ip;            //IP host
+    unsigned int   port;          //Port Host
+    char          *routing_to;     //Routing to
+} config_sip_t;
+#define new_config_sip()   (config_sip_t*)calloc(1, sizeof(config_sip_t))
 
-inline void init_sip_socket_t(sip_socket_t *p_sip_socket,unsigned char *interface_name, unsigned char *ip_host, unsigned int port_host);
+extern map  *cfg_sip;  // <str, config_sip_t>
 
-inline void free_sip_socket(void **p_p_data);
-
-extern map *map_iface_sip;   //<str(name_interface), smpp_socket_t>
+inline void destroy_config_sip(config_sip_t *sip);
+void free_config_sip(void **sip);
+int compare_config_sip(const void *sip1, const void *sip2);
+inline void display_config_sip(config_sip_t *sip);
 
 ///////////////////////
 
-int sip_start_connection(sip_socket_t *p_sip_socket);
-int sip_end_connection(sip_socket_t *p_sip_socket);
-int sip_restart_connection(sip_socket_t *p_sip_socket);
+int sip_start_connection(config_sip_t *p_config_sip);
+int sip_end_connection(config_sip_t *p_config_sip);
+int sip_restart_connection(config_sip_t *p_config_sip);
 
-int sip_engine(sip_socket_t *p_sip_sock);
+int sip_engine(config_sip_t *p_config_sip);
 
 ///////////////////////
 // Send SIP MESSAGE
@@ -68,15 +73,5 @@ int sip_engine(sip_socket_t *p_sip_sock);
 
 int send_sms_to_sip(unsigned char *interface_name, sm_data_t *p_sm, unsigned char *ip_remote, unsigned int port_remote);
 
-///////////////////////
-// Used for MAP and LIST
-/////
-
-void  free_sip_socket(void **p_p_data);
-void* copy_sip_socket(const void *p_data);
-int   compare_sip_socket(const void *p_data1, const void *p_data2);
-
-
 #endif /* SIP_IO_H*/
-
 

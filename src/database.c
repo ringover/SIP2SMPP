@@ -1,6 +1,56 @@
 
 #include "database.h"
 
+config_sqlite_t  *cfg_sqlite;
+
+//////////////////////////////
+// Config SQLite3
+///////////
+
+inline void destroy_config_sqlite(config_sqlite_t *sqlite){
+    if(sqlite->path)
+        free(sqlite->path);
+    //sqlite->path = NULL;
+    if(sqlite->encoding)
+        free(sqlite->encoding);
+    //sqlite->encoding = NULL;
+    if(sqlite->synchronous)
+        free(sqlite->synchronous);
+    //sqlite->synchronous = NULL;
+    //sqlite->heap_limit = 0;
+    if(sqlite->foreign_keys)
+        free(sqlite->foreign_keys);
+    //sqlite->foreign_keys = NULL;
+    memset(sqlite, 0, sizeof(config_sqlite_t));
+    return;
+}
+
+void free_config_sqlite(void **sqlite){
+    destroy_config_sqlite((config_sqlite_t*)*sqlite);
+    free(*sqlite);
+    *sqlite = NULL;
+    return;
+}
+
+inline void display_config_sqlite(config_sqlite_t *sqlite){
+    if(sqlite){
+        char buffer[2048] = { 0 };
+        sprintf(buffer, "[sqlite]\n"
+                        STR_PATH"         : %s\n"
+                        STR_ENCODING"     : %s\n"
+                        STR_SYNCHRONOUS"  : %s\n"
+                        STR_HEAP_LIMIT"   : %d\n"
+                        STR_FOREIGN_KEYS" : %s\n",
+                sqlite->path,
+                sqlite->encoding,
+                sqlite->synchronous,
+                sqlite->heap_limit,
+                sqlite->foreign_keys);
+        DEBUG(LOG_SCREEN, "\n%s", buffer)
+    }
+    return;
+}
+
 //////////////////////////////
 // Statement DB
 ///////////
@@ -61,6 +111,7 @@ static char *str_url         = NULL;
 
 int db_init(void){
     int ret = 0;
+//    extern config_sqlite_t *cfg_sqlite;
 
     if(!cfg_sqlite){
         return (int) -1;

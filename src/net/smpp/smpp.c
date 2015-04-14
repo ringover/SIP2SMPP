@@ -41,6 +41,162 @@ static inline int _smpp_pack_and_send(socket_t *sock, void *data);
 ////                                /////
 /////////////////////////////////////////
 
+inline const char* bind_to_str(int i){
+    if(i == BIND_TRANSCEIVER){
+        return (const char*) STR_BIND_TRANSCEIVER;
+    }
+    if(i == BIND_RECEIVER){
+        return (const char*) STR_BIND_RECEIVER;
+    }
+    if(i == BIND_TRANSMITTER){
+        return (const char*) STR_BIND_TRANSMITTER;
+    }
+    return (const char*) NULL;
+}
+
+inline int str_to_bind(const char *str){
+    if(str){
+        char *tmp = NULL;
+        strupper(&tmp, str);
+        if(strcmp(tmp, STR_BIND_TRANSCEIVER) == 0){
+            return (int) BIND_TRANSCEIVER;
+        }
+        if(strcmp(tmp, STR_BIND_RECEIVER) == 0){
+            return (int) BIND_RECEIVER;
+        }
+        if(strcmp(tmp, STR_BIND_TRANSMITTER) == 0){
+            return (int) BIND_TRANSMITTER;
+        }
+    }
+    return (int) -1;
+}
+
+inline const char* npi_to_str(int i){
+    if(i == NPI_Unknown){
+        return (const char*) STR_NPI_Unknown;
+    }
+    if(i == NPI_ISDN_E163_E164){
+        return (const char*) STR_NPI_ISDN_E163_E164;
+    }
+    if(i == NPI_Data_X121){
+        return (const char*) STR_NPI_Data_X121;
+    }
+    if(i == NPI_Telex_F69){
+        return (const char*) STR_NPI_Telex_F69;
+    }
+    if(i == NPI_Land_Mobile_E212){
+        return (const char*) STR_NPI_Land_Mobile_E212;
+    }
+    if(i == NPI_National){
+        return (const char*) STR_NPI_National;
+    }
+    if(i == NPI_Private){
+        return (const char*) STR_NPI_Private;
+    }
+    if(i == NPI_ERMES){
+        return (const char*) STR_NPI_ERMES;
+    }
+    if(i == NPI_Internet_IP){
+        return (const char*) STR_NPI_Internet_IP;
+    }
+    if(i == NPI_WAP_Client_Id){
+        return (const char*) STR_NPI_WAP_Client_Id;
+    }
+    return (const char*) NULL;
+}
+
+inline int str_to_npi(const char *str){
+    if(str){
+        char *tmp = NULL;
+        strupper(&tmp, str);
+        if(strcmp(tmp, STR_NPI_Unknown) == 0){
+            return (int) NPI_Unknown;
+        }
+        if(strcmp(tmp, STR_NPI_ISDN_E163_E164) == 0){
+            return (int) NPI_ISDN_E163_E164;
+        }
+        if(strcmp(tmp, STR_NPI_Data_X121) == 0){
+            return (int) NPI_Data_X121;
+        }
+        if(strcmp(tmp, STR_NPI_Telex_F69) == 0){
+            return (int) NPI_Telex_F69;
+        }
+        if(strcmp(tmp, STR_NPI_Land_Mobile_E212) == 0){
+            return (int) NPI_Land_Mobile_E212;
+        }
+        if(strcmp(tmp, STR_NPI_National) == 0){
+            return (int) NPI_National;
+        }
+        if(strcmp(tmp, STR_NPI_Private) == 0){
+            return (int) NPI_Private;
+        }
+        if(strcmp(tmp, STR_NPI_ERMES) == 0){
+            return (int) NPI_ERMES;
+        }
+        if(strcmp(tmp, STR_NPI_Internet_IP) == 0){
+            return (int) NPI_Internet_IP;
+        }
+        if(strcmp(tmp, STR_NPI_WAP_Client_Id) == 0){
+            return (int) NPI_WAP_Client_Id;
+        }
+    }
+    return (int) -1;
+}
+
+inline const char* ton_to_str(int i){
+    if(i == TON_Unknown){
+        return (const char*) STR_TON_Unknown;
+    }
+    if(i == TON_International){
+        return (const char*) STR_TON_International;
+    }
+    if(i == TON_National){
+        return (const char*) STR_TON_National;
+    }
+    if(i == TON_Network_Specific){
+        return (const char*) STR_TON_Network_Specific;
+    }
+    if(i == TON_Subscriber_Number){
+        return (const char*) STR_TON_Subscriber_Number;
+    }
+    if(i == TON_Alphanumeric){
+        return (const char*) STR_TON_Alphanumeric;
+    }
+    if(i == TON_Abbreviated){
+        return (const char*) STR_TON_Abbreviated;
+    }
+    return (const char*) NULL;
+}
+
+inline int str_to_ton(const char *str){
+    if(str){
+        char *tmp = NULL;
+        strupper(&tmp, str);
+        if(strcmp(tmp, STR_TON_Unknown) == 0){
+            return (int) TON_Unknown;
+        }
+        if(strcmp(tmp, STR_TON_International) == 0){
+            return (int) TON_International;
+        }
+        if(strcmp(tmp, STR_TON_National) == 0){
+            return (int) TON_National;
+        }
+        if(strcmp(tmp, STR_TON_Network_Specific) == 0){
+            return (int) TON_Network_Specific;
+        }
+        if(strcmp(tmp, STR_TON_Subscriber_Number) == 0){
+            return (int) TON_Subscriber_Number;
+        }
+        if(strcmp(tmp, STR_TON_Alphanumeric) == 0){
+            return (int) TON_Alphanumeric;
+        }
+        if(strcmp(tmp, STR_TON_Abbreviated) == 0){
+            return (int) TON_Abbreviated;
+        }
+    }
+    return (int) -1;
+}
+
 //Display trame SMPP
 static inline int _dump_pdu_and_buf(char *buffer, int len, void* data, char *communication_mode){
     int ret = -1;
@@ -402,6 +558,7 @@ int smpp_send_bind_server(socket_t *sock, char *ip_host, unsigned int port_host)
 
 //TODO:int smpp_wait_specific_client(socket_t *sock, char *ip_remote, int port_remote, int *bind){ //close socket if ip/port is not correct
 int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
+    int csocket = 0;
     if(sock && ip_remote && port_remote && bind){
 /*        int csock = 0;
         bind_t       req = { 0 };
@@ -410,9 +567,9 @@ int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
         res.command_length = 0;
         res.command_id = ESME_ROK;
 */
-        if((sock->csocket = do_tcp_wait_client(sock, ip_remote, port_remote)) == -1){
+        if((csocket = do_tcp_wait_client(sock, ip_remote, port_remote)) == -1){
             ERROR(LOG_SCREEN | LOG_FILE, "Client SMPP not connect (failed)")
-            return (int) sock->csocket;
+            return (int) csocket;
         }
 /*
         sock->csocket = csock;       
@@ -450,7 +607,7 @@ int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
         return (int)req.command_id;
 */
     }
-    return (int) sock->csocket;
+    return (int) csocket;
 }
 
 /**

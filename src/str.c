@@ -38,7 +38,7 @@ inline int count_occurence_in_string(char *str_in, char *occurence){
 inline char** explode(char *str_in, char *cutter){
     int nb_occur = count_occurence_in_string(str_in, cutter);
     
-    if(nb_occur>0){
+    if(nb_occur>=0){
         char  **exp = (char**)calloc(nb_occur+2, sizeof(char*));
         char  *end  = str_in+strlen((char*)str_in);
         char  *cursor1 = str_in;

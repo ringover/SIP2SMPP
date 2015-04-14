@@ -32,6 +32,50 @@ static inline int _check_config_interface_smpp(const char *name);
 static inline int _check_config_interface_sip(const char *name);
 
 /**
+ * CONFIG MAIN
+ */
+
+config_main_t  *cfg_main;
+
+inline void destroy_config_main(config_main_t *main){
+    //main->log_level = 0;
+    //main->loglevel = NULL;
+    //main->fork = false;
+    if(main->launch_msg)
+        free(main->launch_msg);
+    //main->launch_msg = NULL;
+    if(main->routing_module)
+        free(main->routing_module);
+    //main->routing_module = NULL;
+    memset(main, 0, sizeof(config_main_t));
+    return;
+}
+
+void free_config_main(void **main){
+    destroy_config_main((config_main_t*)*main);
+    free(*main);
+    *main = NULL;
+    return;
+}
+
+inline void display_config_main(config_main_t *main){
+    if(main){
+        char buffer[2048] = { 0 };
+        sprintf(buffer, "[main]\n"
+                        STR_LOG_LEVEL"      : %s\n"
+                        STR_LAUNCH_MSG"     : %s\n"
+                        STR_FORK"           : %d\n"
+                        STR_ROUTING_MODULE" : %s\n",
+                str_loglevel[(int)main->log_level],
+                main->launch_msg,
+                main->fork,
+                main->routing_module ? main->routing_module : "null");
+        DEBUG(LOG_SCREEN, "\n%s", buffer)
+    }
+    return;
+}
+
+/**
  * LOAD CONFIG
  */
 
@@ -431,14 +475,10 @@ static inline int _check_config_interface_sip(const char *name){
     return (int) error;
 }
 
-/**
- * Main config 
- */
 
-config_main_t       *cfg_main;
-config_sqlite_t     *cfg_sqlite;
-map                 *cfg_sip;  // <str, config_sip_t>
-map                 *cfg_smpp; // <str, config_smpp_t>
+/**
+ * LOAD/FREE/DISPLAY config file
+ */
 
 int load_config_file(char *path_file, enum_config_load_t flags, const char *name){
     int error = 0;
@@ -484,3 +524,67 @@ int load_config_file(char *path_file, enum_config_load_t flags, const char *name
     return (int) error;
 }
 
+void free_config_file(enum_config_load_t flags, const char *name){
+    if(flags & CONFIG_MAIN){
+        free_config_main((void**)&cfg_main);
+    }
+    if(flags & CONFIG_SQLITE){
+        free_config_sqlite((void**)&cfg_sqlite);
+    }
+    if((flags & CONFIG_SMPP) && name){
+        map_erase(cfg_smpp, (void*)name);
+    }else if(flags & CONFIG_SMPP){
+        map_destroy(&cfg_smpp);
+    }
+    if((flags & CONFIG_SIP) && name){
+        map_erase(cfg_sip, (void*)name);
+    }else if(flags & CONFIG_SIP){
+        map_destroy(&cfg_sip);
+    }
+//    if((flags & CONFIG_SIGTRAN) && name){
+//        map_erase(cfg_sigtran, (void*)name);
+//    }else if(flags & CONFIG_SIGTRAN){
+//        map_destroy(&cfg_sigtran);
+//    }
+    return;
+}
+
+void display_config_file(enum_config_load_t flags, const char *name){
+    if(flags & CONFIG_MAIN){
+        display_config_main(cfg_main);
+    }
+    if(flags & CONFIG_SQLITE){
+        display_config_sqlite(cfg_sqlite);
+    }
+    if((flags & CONFIG_SMPP) && name){
+        config_smpp_t *value = (config_smpp_t*)map_get(cfg_smpp, name);
+        display_config_smpp(value);
+    }else if(flags & CONFIG_SMPP){
+        iterator_map *p_it = cfg_smpp->begin;
+        while(p_it){
+            display_config_smpp((config_smpp_t*)p_it->value);
+            p_it = p_it->next;
+        }
+    }
+    if((flags & CONFIG_SIP) && name){
+        config_sip_t *value = (config_sip_t*)map_get(cfg_sip, name);
+        display_config_sip(value);
+    }else if(flags & CONFIG_SIP){
+        iterator_map *p_it = cfg_sip->begin;
+        while(p_it){
+            display_config_sip((config_sip_t*)p_it->value);
+            p_it = p_it->next;
+        }
+    }
+//    if((flags & CONFIG_SIGTRAN) && name){
+//        config_client_sigtran_t *value = (config_client_sigtran_t*)map_get(cfg_sigtran, name);
+//        display_config_sigtran(value);
+//    }else if(flags & CONFIG_SIGTRAN){
+//        iterator_map *p_it = cfg_sigtran->begin;
+//        while(p_it){
+//            display_config_sigtran((config_client_sigtran_t*)p_it->value);
+//            p_it = p_it->next;
+//        }
+//    }
+    return;
+}
