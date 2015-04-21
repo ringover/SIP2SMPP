@@ -87,8 +87,8 @@ int default_start_routing(void **functions, void **cfgs){
     }
     r_send_sms_to_smpp = (p_send_sms_to_smpp)functions[0]; //send_sms_to_client_smpp
     r_send_sms_to_sip = (p_send_sms_to_sip)functions[1]; //send_sms_to_sip
-    r_cfg_sip = (map*)cfgs[0]; //cfg_sip
-    r_cfg_smpp = (map*)cfgs[1]; //cfg_smpp
+    r_cfg_smpp = (map*)cfgs[0]; //cfg_smpp
+    r_cfg_sip = (map*)cfgs[1]; //cfg_sip
     return (int) 0;
 }
 
