@@ -78,11 +78,11 @@ int routing_to(char *name, char *to, unsigned int *port){
 
 int default_start_routing(void **functions, void **cfgs){
     if(!functions){
-        ERROR(LOG_SCREEN, "functions parametter is empty");
+        ERROR(LOG_SCREEN, "functions parameter is empty");
         return (int) -1;
     }
     if(!cfgs){
-        ERROR(LOG_SCREEN, "cfgs parametter is empty");
+        ERROR(LOG_SCREEN, "cfgs parameter is empty");
         return (int) -1;
     }
     r_send_sms_to_smpp = (p_send_sms_to_smpp)functions[0]; //send_sms_to_client_smpp
