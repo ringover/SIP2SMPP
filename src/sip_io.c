@@ -147,7 +147,7 @@ static int sip_recv_processing_request(socket_t *sock, sip_message_t *p_sip, cha
         //Set in map
         map_set(map_session_sip, k_call_id, p_session);
         //routing
-        if(routing(interface, ip_origin, port_origin, p_sm) == -1){
+        if(f_routing(interface, ip_origin, port_origin, p_sm) == -1){
             //send resp error
             ERROR(LOG_SCREEN | LOG_FILE, "Routing return -1 -> destroy SM/Session SMPP and sent error")
             p_sip->content_length = 0;
@@ -256,6 +256,18 @@ int sip_engine(config_sip_t *p_sip_conf){
     return (int) ret;
 }
 
+void create_default_sip_out_interface(char *str_sip){
+    //default out SIP interface
+    if(!str_sip){
+        str_sip = "sip_out";
+    }
+    char *name = (char*)calloc(strlen(str_sip) + 1, sizeof(char));
+    config_sip_t *p_config_sip = new_config_sip();
+    p_config_sip->name = (char*)calloc(strlen(str_sip) + 1, sizeof(char));
+    strcpy(p_config_sip->name, str_sip);
+    strcpy(name, str_sip);
+    map_set(cfg_sip, name, p_config_sip);
+}
 
 ///////////////////////
 // SEND

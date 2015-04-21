@@ -17,11 +17,11 @@
 //#include "ini/iniFile.h"
 #include "config/config.h"
 
-int start_routing();
+int default_start_routing(void **functions, void **cfgs);
 
-int routing(const unsigned char *interface_name, const unsigned char *origin_ip, const unsigned int *origin_port, sm_data_t *p_sm);
+int default_routing(const unsigned char *interface_name, const unsigned char *origin_ip, const unsigned int *origin_port, sm_data_t *p_sm);
 
-int close_routing();
+int default_close_routing();
 
 #endif /*ROUTING_H*/
 

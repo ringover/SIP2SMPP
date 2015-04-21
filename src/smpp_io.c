@@ -287,7 +287,7 @@ int smpp_recv_processing_request_sm(socket_t *sock, char *interface, char *ip_re
             *k_smpp_data = req->sequence_number;
             map_set(map_session_smpp, k_smpp_data, p_smpp);
             //routing
-            if(routing(interface, ip_remote, port_remote, p_sm) == -1){
+            if(f_routing(interface, ip_remote, port_remote, p_sm) == -1){
                 //send resp error
                 ERROR(LOG_SCREEN | LOG_FILE, "Routing return -1 -> destroy SM/Session SMPP and sent error")
                 smpp_send_response(sock, req->command_id + GENERIC_NACK, ESME_RINVCMDID, &req->sequence_number);
@@ -482,7 +482,7 @@ int smpp_engine(config_smpp_t *p_config_smpp){
  * Routing function
  */
 
-int send_sms_to_client_smpp(unsigned char* interface_name, sm_data_t *p_sm){
+int send_sms_to_smpp(unsigned char* interface_name, sm_data_t *p_sm){
     int ret = -1;
     config_smpp_t  *p_config_smpp = map_get(cfg_smpp, interface_name);
     //create session + send submit_sm_t
@@ -500,10 +500,6 @@ int send_sms_to_client_smpp(unsigned char* interface_name, sm_data_t *p_sm){
         ret = smpp_send_submit_sm(p_config_smpp->sock, p_sm->src, p_sm->dst, p_sm->msg, &(gen->sequence_number), p_config_smpp->ton, p_config_smpp->npi, p_config_smpp->ton, p_config_smpp->npi);
     }
     return (int) ret;
-}
-
-int send_sms_to_server_smpp(unsigned char* interface_name, sm_data_t *p_sm, char *ip_client, unsigned int port_client){
-    return (int) -1;
 }
 
 

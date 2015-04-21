@@ -7,9 +7,10 @@ CXX = g++
 LD = $(CC)
 
 #LDFLAGS = -Wall -pedantic -g -O3
-LDFLAGS = -Wall -pedantic -g 
-ARFLAGS = -pthread -lzdb  -lrt  
-#ARFLAGS = -lsmpp34 -pthread -lzdb  -lrt -losip2 
+#LDFLAGS = -MMD -Wall -pedantic -fPIC -g 
+LDFLAGS = -fPIC -Wall -pedantic -g 
+ARFLAGS = -pthread -lzdb  -lrt -ldl 
+#ARFLAGS = -lsmpp34 -pthread -lzdb  -lrt 
 CFLAGS = $(LDFLAGS)
 #CXXFLASG = $(LDFLAGS) -std=c++11
 CXXFLASG = $(LDFLAGS)

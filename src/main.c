@@ -18,6 +18,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <getopt.h>
+#include <dlfcn.h>
 //THREAD - SEMAPHORE
 #include <pthread.h>
 #include <semaphore.h>
@@ -39,6 +40,7 @@
 //OTHER
 //#include "type_projet.h"
 #include "sm_struct.h"
+#include "routing_def.h"
 #include "routing.h"
 #include "database.h"
 #include "daemonize/daemonize.h"
@@ -47,6 +49,10 @@ threadpool_t *p_threadpool = NULL;
 
 int running = 1;
 char* pid_file = (char*)DEFAULT_PIDFILE;
+
+func_start_routing f_start_routing = NULL;
+func_routing f_routing = NULL;
+func_close_routing f_close_routing = NULL;
 
 /**
 *  \brief This function is a signal handler function
@@ -193,12 +199,15 @@ void join_all_threads(){
     map_destroy(&m_threads);
     return;
 } 
- 
-int main(int argc,char **argv){
-    int c, nofork = 1;
-    FILE *file = NULL;
+
+
+int main(int argc, char **argv){
+    void *mod_routing = NULL;
     char *conffile = NULL;
+    FILE *file = NULL;
+    int nofork = 1;
     char str[100];
+    int c = 0;
     memset(&str, 0, 100*sizeof(char));
     log_init("logFile",NULL);
     log2display(LOG_ALERT);
@@ -264,6 +273,26 @@ int main(int argc,char **argv){
         exit(-1);
     }
 
+    create_default_sip_out_interface(NULL);//sip_out interface
+
+    //Load routing module
+    void* functions[2] = { send_sms_to_smpp, send_sms_to_sip };
+    void* cfgs[2] = { cfg_smpp, cfg_sip };
+    if(cfg_main->routing_module){
+        mod_routing = dlopen(cfg_main->routing_module, RTLD_NOW | RTLD_GLOBAL);
+        if(!mod_routing){
+            ERROR(LOG_SCREEN | LOG_FILE, "%s", dlerror());
+            handler(-1);
+        }
+        f_start_routing = dlsym(mod_routing, "start_routing");
+        f_routing       = dlsym(mod_routing, "routing");
+        f_close_routing = dlsym(mod_routing, "close_routing");
+    }else{
+        f_start_routing = default_start_routing;
+        f_routing       = default_routing;
+        f_close_routing = default_close_routing;
+    }
+
     if(db_init() == -1){
         ERROR(LOG_FILE | LOG_SCREEN,"There are errors when the DB connection!");
         handler(-1);
@@ -271,13 +300,15 @@ int main(int argc,char **argv){
         //TODO: send sms saved in db
     }
 
-    if(start_routing() != 0){
+    if(f_start_routing(functions, cfgs) != 0){
         ERROR(LOG_FILE | LOG_SCREEN, "Routing loading failed");
+        handler(-1);
     }
 
     if(cfg_main && cfg_main->launch_msg){
         printf("\033[0;36m%s\033[0m\n", cfg_main->launch_msg);
     }
+
     printf("SIP 2 SMPP Version  [%s]\n", VERSION);
     printf("Pid file            [%s]\n", pid_file);
     printf("Config File         [%s]\n", conffile);
@@ -292,9 +323,13 @@ int main(int argc,char **argv){
 
     threadpool_destroy(p_threadpool, threadpool_graceful);
 
-    free_config_file(CONFIG_ALL, NULL);
+    f_close_routing();
 
-    close_routing();
+    if(cfg_main->routing_module){
+       dlclose(mod_routing); 
+    }
+
+    free_config_file(CONFIG_ALL, NULL);
 
     handler(0);
 

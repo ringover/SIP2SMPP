@@ -92,6 +92,7 @@ static inline int _load_config_main(void){
     int  error           = 0;
     char loglevel[15]    = { 0 };
     char launch_msg[256] = { 0 };
+    char routing_module[256] = { 0 };
 
     destroy_config_main(&_main);
 
@@ -100,6 +101,11 @@ static inline int _load_config_main(void){
 
     _main.fork = (bool)ini_getbool(STR_MAIN, STR_FORK, false, conffile); 
 
+    ini_gets(STR_MAIN, STR_ROUTING_MODULE, "none", routing_module, sizearray(routing_module), conffile);
+    if(strcmp(routing_module, "none") != 0){
+        _strcpy(_main.routing_module, routing_module);
+    }
+    
     ini_gets(STR_MAIN, STR_LAUNCH_MSG, "none", launch_msg, sizearray(launch_msg), conffile);
     if(strcmp(launch_msg, "none") != 0){
         _strcpy(_main.launch_msg, launch_msg);

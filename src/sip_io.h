@@ -23,11 +23,14 @@
 #include "linked_list/map.h"
 #include "linked_list/keys.h"
 
+#include "config/config.h"
+#include "routing_def.h"
+
 ///////////////////////
 // Used save session SIP info
 /////
 
-typedef struct sip_session_t{
+typedef struct _sip_session{
     sip_message_t *p_msg_sip; //MSG SIP parsed
     sm_data_t     *p_sm;        //sm_data_t
 } sip_session_t;
@@ -66,6 +69,8 @@ int sip_end_connection(config_sip_t *p_config_sip);
 int sip_restart_connection(config_sip_t *p_config_sip);
 
 int sip_engine(config_sip_t *p_config_sip);
+
+void create_default_sip_out_interface(char *str_sip);
 
 ///////////////////////
 // Send SIP MESSAGE

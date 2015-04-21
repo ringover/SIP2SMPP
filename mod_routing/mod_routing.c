@@ -2,31 +2,53 @@
 //  SCRIPT ROUTING SAMPLE  //
 /////////////////////////////
 
-#include "routing.h"
-
-#include "zdb/URL.h"
-#include "zdb/ResultSet.h"
-#include "zdb/PreparedStatement.h"
-#include "zdb/Connection.h"
-#include "zdb/ConnectionPool.h"
-#include "zdb/SQLException.h"
-
+#include "mod_routing.h"
 
 //interface name (cf INI file)
-#define I_CONNECTION_SMPP "SMPP01"
-#define I_LISTEN_SIP      "SIP_H_01"
+#define I_CONNECTION_SMPP "smpp_c01"
+#define I_LISTEN_SIP      "sip_02"
 
 #define URL_MySQL "mysql://sbc:sbcsbc@127.0.0.1/sbc"
+
+/**
+ * Global Variables
+ */
+
+typedef int (*p_send_sms_to_smpp)(unsigned char* interface_name, sm_data_t *p_sm);
+typedef int (*p_send_sms_to_sip)(unsigned char *interface_name, sm_data_t *p_sm, unsigned char *ip_remote, unsigned int port_remote);
+
+static p_send_sms_to_smpp r_send_sms_to_smpp;
+static p_send_sms_to_sip r_send_sms_to_sip;
+static map* r_cfg_sip; 
+static map* r_cfg_smpp;
+//map* cfg_sigtran; //TODO
+
+/**
+ * Local Variables
+ */
 
 static ConnectionPool_T mysql_pool;
 
 //static char *smpp_ip = NULL;
 
-int start_routing(){
+int start_routing(void **functions, void **cfgs){
+    if(!functions){
+        ERROR(LOG_SCREEN, "functions parametter is empty");
+        return (int) -1;
+    }
+    if(!cfgs){
+        ERROR(LOG_SCREEN, "cfgs parametter is empty");
+        return (int) -1;
+    }
+    r_send_sms_to_smpp = (p_send_sms_to_smpp)functions[0]; //send_sms_to_client_smpp
+    r_send_sms_to_sip = (p_send_sms_to_sip)functions[1]; //send_sms_to_sip
+    r_cfg_smpp = (map*)cfgs[1]; //cfg_smpp
+    r_cfg_sip = (map*)cfgs[2]; //cfg_sip
+    //cfg_sigtran = cfg[3]; //cfg_sigtran
+    
     URL_T url = URL_new(URL_MySQL);
     mysql_pool = ConnectionPool_new(url);
     ConnectionPool_start(mysql_pool);
-    //TOGO: Get ip smpp in smpp_ip static variable
     return 0;
 }
 
@@ -89,7 +111,7 @@ int routing(const unsigned char *interface_name, const unsigned char *origin_ip,
         
         free(p_sm->dst); p_sm->dst = r_user;
         //res = send_sms_to_sip(I_LISTEN_SIP, p_sm->src, r_user, p_sm->message, r_ip, r_port);
-        res = send_sms_to_sip(I_LISTEN_SIP, p_sm, r_ip, r_port);
+        res = r_send_sms_to_sip(I_LISTEN_SIP, p_sm, r_ip, r_port);
         free(r_ip);
         //Set LOG
         TRY
@@ -101,7 +123,7 @@ int routing(const unsigned char *interface_name, const unsigned char *origin_ip,
         Connection_close(con);
     }else if(strcmp(interface_name, I_LISTEN_SIP) == 0){
         //send to SMPP interface
-        res = send_sms_to_client_smpp(I_CONNECTION_SMPP, p_sm);
+        res = r_send_sms_to_smpp(I_CONNECTION_SMPP, p_sm);
         //Set LOG
         TRY
             con = ConnectionPool_getConnection(mysql_pool);

@@ -3,6 +3,20 @@
 /////////////////////////////
 #include "routing.h"
 
+/**
+ * Global Variables
+ */
+
+typedef int (*p_send_sms_to_smpp)(unsigned char* interface_name, sm_data_t *p_sm);
+typedef int (*p_send_sms_to_sip)(unsigned char *interface_name, sm_data_t *p_sm, unsigned char *ip_remote, unsigned int port_remote);
+
+static p_send_sms_to_smpp r_send_sms_to_smpp;
+static p_send_sms_to_sip r_send_sms_to_sip;
+static map* r_cfg_sip;
+static map* r_cfg_smpp;
+//map* cfg_sigtran; //TODO
+
+
 /////////////////
 // Foreward sample
 /////
@@ -31,8 +45,8 @@ inline int route_parser(char *routing_to, char *to, unsigned int *port){
 }
 
 int routing_to(char *name, char *to, unsigned int *port){
-    if(cfg_smpp){
-        iterator_map *p_it = cfg_smpp->begin;
+    if(r_cfg_smpp){
+        iterator_map *p_it = r_cfg_smpp->begin;
         while(p_it){
             char *key_name = (char*)p_it->key;
             if(key_name && strcmp(key_name, name) == 0){
@@ -45,8 +59,8 @@ int routing_to(char *name, char *to, unsigned int *port){
             p_it = p_it->next;
         }
     }
-    if(cfg_sip){
-        iterator_map *p_it = cfg_sip->begin;
+    if(r_cfg_sip){
+        iterator_map *p_it = r_cfg_sip->begin;
         while(p_it){
             char *key_name = (char*)p_it->key;
             if(key_name && strcmp(key_name, name) == 0){
@@ -62,27 +76,32 @@ int routing_to(char *name, char *to, unsigned int *port){
     return (int) -1;
 }
 
-int start_routing(){
-    //default SIP
-    char *name = (char*)calloc(strlen("sip_out") + 1, sizeof(char));
-    config_sip_t *p_config_sip = new_config_sip();
-    p_config_sip->name = (char*)calloc(strlen("sip_out") + 1, sizeof(char));
-    strcpy(p_config_sip->name, "sip_out");
-    strcpy(name, "sip_out");
-    map_set(cfg_sip, name, p_config_sip);
+int default_start_routing(void **functions, void **cfgs){
+    if(!functions){
+        ERROR(LOG_SCREEN, "functions parametter is empty");
+        return (int) -1;
+    }
+    if(!cfgs){
+        ERROR(LOG_SCREEN, "cfgs parametter is empty");
+        return (int) -1;
+    }
+    r_send_sms_to_smpp = (p_send_sms_to_smpp)functions[0]; //send_sms_to_client_smpp
+    r_send_sms_to_sip = (p_send_sms_to_sip)functions[1]; //send_sms_to_sip
+    r_cfg_sip = (map*)cfgs[0]; //cfg_sip
+    r_cfg_smpp = (map*)cfgs[1]; //cfg_smpp
     return (int) 0;
 }
 
-int routing(const unsigned char *interface_name, const unsigned char *origin_ip, const unsigned int *origin_port, sm_data_t *p_sm){
+int default_routing(const unsigned char *interface_name, const unsigned char *origin_ip, const unsigned int *origin_port, sm_data_t *p_sm){
     char to[16] = { 0 };
     unsigned int port = 0;
 
     switch(routing_to(interface_name, to, &port)){
         case I_SMPP : 
-            return (int) send_sms_to_client_smpp(to, p_sm);
+            return (int) r_send_sms_to_smpp(to, p_sm);
         case I_SIP :
-            return (int) send_sms_to_sip("sip_out", p_sm, to, port);
-        case I_SIGTRAN :
+            return (int) r_send_sms_to_sip("sip_out", p_sm, to, port);
+        case I_SIGTRAN : //TODO
         default:
             return (int) -1;
     }
@@ -91,7 +110,7 @@ int routing(const unsigned char *interface_name, const unsigned char *origin_ip,
     return (int) -1;
 }
 
-int close_routing(){
+int default_close_routing(){
     return (int) 0;
 }
 

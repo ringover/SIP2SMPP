@@ -27,7 +27,7 @@
 #include "sm_struct.h"
 #include "threadpool/threadpool.h"
 
-#include "routing.h"
+#include "routing_def.h"
 
 //Status SMPP
 #define   SMPP_CONNECT    true
@@ -116,8 +116,7 @@ int smpp_recv_processing_response(void *res);
 static void* smpp_recv_processing(void *data);
 int smpp_engine(config_smpp_t *p_config_smpp);
 
-int send_sms_to_client_smpp(unsigned char* interface_name, sm_data_t *p_sm);
-int send_sms_to_server_smpp(unsigned char* interface_name, sm_data_t *p_sm, char *ip_client, unsigned int port_client);
+int send_sms_to_smpp(unsigned char* interface_name, sm_data_t *p_sm);
 
 /**
  * Used for MAP and LIST
