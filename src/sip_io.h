@@ -70,8 +70,6 @@ int sip_restart_connection(config_sip_t *p_config_sip);
 
 int sip_engine(config_sip_t *p_config_sip);
 
-void create_default_sip_out_interface(char *str_sip);
-
 ///////////////////////
 // Send SIP MESSAGE
 /////

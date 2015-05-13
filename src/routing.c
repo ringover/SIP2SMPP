@@ -89,6 +89,12 @@ int default_start_routing(void **functions, void **cfgs){
     r_send_sms_to_sip = (p_send_sms_to_sip)functions[1]; //send_sms_to_sip
     r_cfg_smpp = (map*)cfgs[0]; //cfg_smpp
     r_cfg_sip = (map*)cfgs[1]; //cfg_sip
+
+		if(map_get(r_cfg_sip, "sip_out") == NULL){
+        ERROR(LOG_SCREEN, "sip_out interface doesn't exist");
+				return (int) -1;
+		}
+
     return (int) 0;
 }
 

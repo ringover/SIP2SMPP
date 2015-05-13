@@ -256,19 +256,6 @@ int sip_engine(config_sip_t *p_sip_conf){
     return (int) ret;
 }
 
-void create_default_sip_out_interface(char *str_sip){
-    //default out SIP interface
-    if(!str_sip){
-        str_sip = "sip_out";
-    }
-    char *name = (char*)calloc(strlen(str_sip) + 1, sizeof(char));
-    config_sip_t *p_config_sip = new_config_sip();
-    p_config_sip->name = (char*)calloc(strlen(str_sip) + 1, sizeof(char));
-    strcpy(p_config_sip->name, str_sip);
-    strcpy(name, str_sip);
-    map_set(cfg_sip, name, p_config_sip);
-}
-
 ///////////////////////
 // SEND
 /////
