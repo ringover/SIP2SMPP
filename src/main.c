@@ -273,8 +273,6 @@ int main(int argc, char **argv){
         exit(-1);
     }
 
-    create_default_sip_out_interface(NULL);//sip_out interface
-
     //Load routing module
     void* functions[2] = { send_sms_to_smpp, send_sms_to_sip };
     void* cfgs[2] = { cfg_smpp, cfg_sip };

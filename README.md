@@ -17,7 +17,8 @@ Version 0.2.0
 > https://github.com/bjtpartners/libsmpp34
 
     ./configure
-    make && make install
+    make
+    make install
 
 Download and install LibZDB : http://www.tildeslash.com/libzdb/#
 
@@ -27,6 +28,7 @@ Download and install LibZDB : http://www.tildeslash.com/libzdb/#
 
 Now, build the project :
       
+    ./configure
     make
     make install
     

@@ -3,12 +3,8 @@
 *.old
 *.bak
 *.swp
-connectionSIP
-connectionSMPP
-sip2smpp
-main
-Makefile.scan
+*.dirstamp
+.deps
+src/sip2smpp
+Makefile
 logFile
-core
-y.tab.c
-database.sql

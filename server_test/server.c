@@ -10,10 +10,10 @@
 #include <pthread.h>
 #include <sys/types.h>
 #include <netdb.h>
-#include "../net/tcp/tcp.h"
-#include "../log/log.h"
-#include "../smpp_io.h"
-#include "../net/smpp/smpp.h"
+#include "../src/net/tcp/tcp.h"
+#include "../src/log/log.h"
+#include "../src/smpp_io.h"
+#include "../src/net/smpp/smpp.h"
 
 char buffer[2048];
 socket_t *sock;
