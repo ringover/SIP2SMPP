@@ -278,7 +278,7 @@ int smpp_recv_processing_request_sm(socket_t *sock, char *interface, char *ip_re
         }
         if(interface && ip_remote && port_remote && p_sm->src && p_sm->dst && p_sm->msg){
             //création de sm_data_t + sauvegarde de la session SMPP
-            init_sm_data_t(p_sm, 0, sock, I_SMPP, ip_remote, port_remote, data, NULL, NULL, NULL);
+            init_sm_data_t(p_sm, sock, 0, I_SMPP, ip_remote, port_remote, data, NULL, NULL, NULL);
             p_sm->id = db_insert_sm("", req->sequence_number, interface, ip_remote, port_remote, p_sm->src, p_sm->dst, p_sm->msg);
             //save SMPP session
             unsigned int *k_smpp_data = new_uint32();//Key

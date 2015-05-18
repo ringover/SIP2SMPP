@@ -179,7 +179,7 @@ static int sip_recv_processing_response(sip_message_t *p_sip){
             }   break;
             case I_SMPP :
             {   generic_nack_t *p_smpp = (generic_nack_t*)p_session->p_sm->p_msg_origin;
-                smpp_send_response(p_session->p_sm->sock, p_smpp->command_id & GENERIC_NACK, ESME_ROK, &p_smpp->sequence_number);
+                smpp_send_response(p_session->p_sm->sock, p_smpp->command_id | GENERIC_NACK, ESME_ROK, &p_smpp->sequence_number);
                 map_erase(map_session_smpp, &p_smpp->sequence_number);
                 //free(p_smpp);
             }   break;
@@ -201,9 +201,9 @@ static void* sip_recv_processing(void *data){
     config_sip_t  *p_sip_conf  = (config_sip_t*)all_data[1];
     char          *interface   = (char*)all_data[2];
     char          *ip_origin   = (char*)all_data[3];
-    unsigned int  port_origin = (unsigned int)*(all_data+4);
+    unsigned int  *port_origin = (unsigned int*)all_data[4];
     if(p_sip_msg && ip_origin && port_origin && MSG_IS_MESSAGE(p_sip_msg->method)){
-        sip_recv_processing_request(p_sip_conf->sock, p_sip_msg, interface, ip_origin, port_origin);
+        sip_recv_processing_request(p_sip_conf->sock, p_sip_msg, interface, ip_origin, *port_origin);
     }else if(p_sip_msg && (p_sip_msg->status_code == 200 || p_sip_msg->status_code == 202)){
         sip_recv_processing_response(p_sip_msg);
         goto free_origin_param;
@@ -211,7 +211,7 @@ static void* sip_recv_processing(void *data){
         //send 405
         p_sip_msg->status_code = 405;
         _strcpy(p_sip_msg->reason_phrase, METHOD_NOT_ALLOWED_STR);
-        sip_send_response(p_sip_conf->sock, ip_origin, port_origin, p_sip_msg);
+        sip_send_response(p_sip_conf->sock, ip_origin, *port_origin, p_sip_msg);
         //free all param
         goto free_all_param;
     }else{
@@ -250,9 +250,16 @@ int sip_engine(config_sip_t *p_sip_conf){
         data[2] = p_sip_conf->name;
         data[3] = ip_remote;
         data[4] = calloc(1, sizeof(unsigned int));
-        *(data+4) = port_remote;
+				memcpy(data[4], &port_remote, sizeof(unsigned int));
         threadpool_add(p_threadpool, sip_recv_processing, data, 0);
-    }
+    }else{
+				if(data_sip){
+						free(data_sip);
+				}
+				if(ip_remote){
+						free(ip_remote);
+				}
+		}
     return (int) ret;
 }
 
@@ -271,6 +278,13 @@ int send_sms_to_sip(unsigned char *interface_name, sm_data_t *p_sm, unsigned cha
         init_sip_ruri_t(&p_sip->ruri, "sip", p_sm->dst, ip_remote, port_remote);
         init_sip_from_t(&p_sip->from, "sip", p_sm->src, p_sip_conf->ip, p_sip_conf->port, NULL);
         init_sip_to_t(&p_sip->to, "sip",   p_sm->dst, ip_remote, port_remote, NULL);
+				{		char via[64] = { 0 };
+						//unsigned int r = rand();
+						p_sip->via = (sip_via_t*)calloc(1, sizeof(sip_via_t));
+						//sprintf(via,"SIP/2.0/UDP %s:%d;branch=z9hG4bK-bF%d", p_sip_conf->ip, p_sip_conf->port, r);
+						sprintf(via,"SIP/2.0/UDP %s:%d", p_sip_conf->ip, p_sip_conf->port);
+						init_sip_via_t(p_sip->via, via, NULL);
+				}
         generate_call_id(&k_session);
         init_sip_call_id_t(&p_sip->call_id, k_session, p_sip_conf->ip);
         init_sip_cseq_t(&p_sip->cseq, (unsigned int)rand()%8000+1, MESSAGE_STR);

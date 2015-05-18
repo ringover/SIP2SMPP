@@ -81,7 +81,9 @@ inline int sip_receive(socket_t *sock, char *buffer, size_t buffer_len, char **r
         struct sockaddr_in from = { 0 };
         if((ret = do_udp_receive(sock, buffer, buffer_len, &from)) > 0){
             if(remote_ip){
-                *remote_ip = inet_ntoa(from.sin_addr);
+								char *r_ip = inet_ntoa(from.sin_addr);
+                *remote_ip = (char**)calloc(strlen(r_ip)+1, sizeof(char));
+								strcpy(*remote_ip,r_ip);
             }
             if(remote_port){
                 *remote_port = ntohs(from.sin_port);
@@ -98,12 +100,12 @@ int sip_scan_sock(socket_t *sock, sip_message_t **p_sip, char **remote_ip, unsig
     char buffer[2048] = { 0 };
     size_t buffer_len = sizeof(buffer);
     if(p_sip && remote_ip && remote_port){
-        if(*p_sip == NULL){
-            *p_sip = calloc(1, sizeof(sip_message_t));
-        }
         if(sip_receive(sock, buffer, buffer_len, remote_ip, remote_port) <= 0){
             return (int) -1;
         }
+        //if(*p_sip == NULL){
+            *p_sip = (sip_message_t*)calloc(1, sizeof(sip_message_t));
+        //}
         return (int) sip_parser_message(*p_sip, buffer);
     }
     return (int) -1;

@@ -263,8 +263,8 @@ int sip_parser_first_line(sip_message_t *p_sip, char *buffer){
         ERROR(LOG_SCREEN | LOG_FILE, "SIP Syntax error")
         return (int) -1;
     }
-    if(sip_msg_is_response(c1) == 0){
-        //SIP/2.0 200 OK
+    if(sip_msg_is_response(c1) >= 0){
+        //eg : SIP/2.0 200 OK (or) SIP/2.0 202 ACCEPTED
         //SIP_VERSION
         _strncpy(p_sip->version,c1,c2-c1);
         c1 = strchr(++c2, ' ');

@@ -1,5 +1,5 @@
 
-AM_CFLAGS = -fPIC -Wall -pedantic -O3
+AM_CFLAGS = -fPIC -Wall -pedantic
 AM_LDFLAGS = -pthread -lzdb -lsmpp34 -lrt -ldl
 
 bin_PROGRAMS = sip2smpp
