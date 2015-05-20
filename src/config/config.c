@@ -164,11 +164,12 @@ static inline int _load_config_interface_sigtran(const char *name){
 }
 */
 static inline int _load_config_interface_client_smpp(const char *name){
-    int   error          = 0;
-    char  ip[17]         = { 0 };  //Remote is client/Host if server
-    char  system_id[17]  = { 0 };  //User ID
-    char  password[10]   = { 0 };  //Passwd
-    char  routing_to[25] = { 0 };  //Routing to
+    int   error             = 0;
+    char  ip[17]            = { 0 };  //Remote is client/Host if server
+    char  system_id[17]     = { 0 };  //User ID
+    char  password[10]      = { 0 };  //Passwd
+    char  address_range[41] = { 0 };  //Routing to
+    char  routing_to[25]    = { 0 };  //Routing to
 
     destroy_config_client_smpp(&_c_smpp);
 
@@ -197,6 +198,11 @@ static inline int _load_config_interface_client_smpp(const char *name){
 //    ini_gets(name, STR_TON, STR_TON_International, ton, sizearray(ton), conffile);
 //    _c_smpp.ton = str_to_ton(ton);
 
+    ini_gets(name, STR_ADDRESS_RANGE, "none", address_range, sizearray(address_range), conffile);
+    if(strcmp(address_range, "none") != 0){
+        _strcpy(_c_smpp.address_range, address_range);
+    }
+
     ini_gets(name, STR_ROUTING_TO, "none", routing_to, sizearray(routing_to), conffile);
     if(strcmp(routing_to, "none") != 0){
         _strcpy(_c_smpp.routing_to, routing_to);
@@ -220,17 +226,18 @@ static inline int _load_config_interface_client_smpp(const char *name){
 }
 
 static inline int _load_config_interface_smpp(const char *name){
-    int   error            = 0;
-    char  model[8]         = { 0 };    //client | server
-    char  ip[16]           = { 0 };    //Remote is client/Host if server
-    char  system_id[17]    = { 0 };    //User ID
-    char  password[10]     = { 0 };    //Passwd
-    char  ton[20]          = { 0 };    //type_of_number
-    char  npi[20]          = { 0 };    //numeric_plan_indicator
-    char  system_type[10]  = { 0 };    //WWW | EMAIL | VMS | OTA ...
-    char  command_id[15]   = { 0 };    //bind : transceiver | receiver | transmitter
+    int   error             = 0;
+    char  model[8]          = { 0 };    //client | server
+    char  ip[16]            = { 0 };    //Remote is client/Host if server
+    char  system_id[17]     = { 0 };    //User ID
+    char  password[10]      = { 0 };    //Passwd
+    char  ton[20]           = { 0 };    //type_of_number
+    char  npi[20]           = { 0 };    //numeric_plan_indicator
+    char  system_type[10]   = { 0 };    //WWW | EMAIL | VMS | OTA ...
+    char  command_id[15]    = { 0 };    //bind : transceiver | receiver | transmitter
     //char  service_type[20] = { 0 };
-    char  routing_to[25]   = { 0 };    //Routing to - Only if client model
+    char  address_range[41]  = { 0 };  //Routing to
+    char  routing_to[25]     = { 0 };    //Routing to - Only if client model
     char  list_clients[1024] = { 0 };
 
     destroy_config_smpp(&_smpp);
@@ -272,6 +279,11 @@ static inline int _load_config_interface_smpp(const char *name){
 
     ini_gets(name, STR_BIND, STR_BIND_TRANSCEIVER, command_id, sizearray(command_id), conffile);
     _smpp.command_id =  str_to_bind(command_id);
+
+    ini_gets(name, STR_ADDRESS_RANGE, "none", address_range, sizearray(address_range), conffile);
+    if(strcmp(address_range, "none") != 0){
+        _strcpy(_smpp.address_range, address_range);
+    }
 
     ini_gets(name, STR_ROUTING_TO, "none", routing_to, sizearray(routing_to), conffile);
     if(strcmp(routing_to, "none") != 0){

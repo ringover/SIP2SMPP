@@ -31,6 +31,7 @@
 #define STR_NAME            "name"
 #define STR_IP              "ip"
 #define STR_PORT            "port"
+#define STR_ADDRESS_RANGE   "address_range"
 #define STR_ROUTING_TO      "routing_to"
 //DBMS - SQlite3
 #define STR_PATH            "path"

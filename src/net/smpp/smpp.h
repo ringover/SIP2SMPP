@@ -112,16 +112,16 @@ int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote);
  * SMPP BIND Client
  */
 
-int smpp_send_bind_client(socket_t *sock, int command_id, char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src, unsigned int *sequence_number);
+int smpp_send_bind_client(socket_t *sock, int command_id, char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src, char *address_range, unsigned int *sequence_number);
 
-#define smpp_send_bind_transceiver_client(sock, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, sequence_number) \
-    smpp_send_bind_client(sock, BIND_TRANSCEIVER, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, sequence_number)
+#define smpp_send_bind_transceiver_client(sock, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, address_range, sequence_number) \
+    smpp_send_bind_client(sock, BIND_TRANSCEIVER, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, sddress_range, equence_number)
 
-#define smpp_send_bind_receiver_client(sock, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, sequence_number) \
-    smpp_send_bind_client(sock, BIND_RECEIVER, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, sequence_number)
+#define smpp_send_bind_receiver_client(sock, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, address_range, sequence_number) \
+    smpp_send_bind_client(sock, BIND_RECEIVER, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, address_range, sequence_number)
 
-#define smpp_send_bind_transmitter_client(sock, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, sequence_number) \
-    smpp_send_bind_client(sock, BIND_TRANSMITTER, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, sequence_number)
+#define smpp_send_bind_transmitter_client(sock, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, address_range, sequence_number) \
+    smpp_send_bind_client(sock, BIND_TRANSMITTER, ip_remote, port_remote, user, passwd, system_type, ton_src, npi_src, address_range, sequence_number)
 
 /**
  * SMPP send unbind 

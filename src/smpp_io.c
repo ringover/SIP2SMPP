@@ -65,6 +65,8 @@ inline void destroy_config_client_smpp(config_client_smpp_t *c_smpp){
     //c_smpp->password = NULL;
     //c_smpp->ton = 0;
     //c_smpp->npi = 0;
+    if(c_smpp->address_range)
+        free(c_smpp->address_range);
     if(c_smpp->routing_to)
         free(c_smpp->routing_to);
     //c_smpp->routing_to = NULL;
@@ -156,16 +158,17 @@ inline void display_config_smpp(config_smpp_t *smpp){
     if(smpp){
         char buffer[2048] = { 0 };
         sprintf(buffer, "[%s]\n"
-                        STR_MODEL"       : %s\n"
-                        STR_IP"          : %s\n"
-                        STR_PORT"        : %d\n"
-                        STR_SYSTEM_ID"   : %s\n"
-                        STR_PASSWORD"    : %s\n"
+                        STR_MODEL"         : %s\n"
+                        STR_IP"            : %s\n"
+                        STR_PORT"          : %d\n"
+                        STR_SYSTEM_ID"     : %s\n"
+                        STR_PASSWORD"      : %s\n"
                         STR_NPI" : %s\n"
-                        STR_TON"         : %s\n"
-                        STR_SYSTEM_TYPE" : %s\n"
-                        STR_BIND"        : %s\n"
-                        STR_ROUTING_TO"  : %s\n",
+                        STR_TON"           : %s\n"
+                        STR_SYSTEM_TYPE"   : %s\n"
+                        STR_BIND"          : %s\n"
+                        STR_ADDRESS_RANGE" : %s\n"
+                        STR_ROUTING_TO"    : %s\n",
                 smpp->name,
                 str_model[smpp->model],
                 smpp->ip,
@@ -176,6 +179,7 @@ inline void display_config_smpp(config_smpp_t *smpp){
                 ton_to_str(smpp->ton),
                 smpp->system_type,
                 bind_to_str(smpp->command_id),
+                smpp->address_range != NULL ? smpp->address_range : "",
                 smpp->routing_to);
         DEBUG(LOG_SCREEN, "\n%s", buffer)
         if(smpp->list_c_smpp){
@@ -199,7 +203,7 @@ int smpp_start_connection(config_smpp_t *p_config_smpp){
         if(!p_config_smpp->sock){
             p_config_smpp->sock = new_socket();
         }
-        if(smpp_send_bind_client(p_config_smpp->sock, p_config_smpp->command_id, p_config_smpp->ip, p_config_smpp->port, p_config_smpp->system_id, p_config_smpp->password, p_config_smpp->system_type, p_config_smpp->ton, p_config_smpp->npi, sequence_number) != -1){
+        if(smpp_send_bind_client(p_config_smpp->sock, p_config_smpp->command_id, p_config_smpp->ip, p_config_smpp->port, p_config_smpp->system_id, p_config_smpp->password, p_config_smpp->system_type, p_config_smpp->ton, p_config_smpp->npi, p_config_smpp->address_range, sequence_number) != -1){
             //create session
             smpp_session_t *p_session = new_smpp_session_t();
             map_set(map_session_smpp, sequence_number, p_session);

@@ -62,6 +62,7 @@ typedef struct _config_client_smpp{
     char         *password;       //Passwd
     char          npi;            //numeric_plan_indicator
     char          ton;            //type_of_number
+    char         *address_range;  //Address Range
     char         *routing_to;     //Routing to
 } config_client_smpp_t;
 #define new_config_client_smpp()   (config_client_smpp_t*)calloc(1, sizeof(config_client_smpp_t))
@@ -77,6 +78,7 @@ typedef struct _config_smpp{
     char         *password;       //Passwd
     char          npi;            //numeric_plan_indicator
     char          ton;            //type_of_number
+    char         *address_range;  //Address Range
     char         *system_type;    //WWW | EMAIL | VMS | OTA ...
     char         *service_type;   //The service_type parameter can be used to indicate the SMS Application service associated with the message
     int           command_id;     //bind : transceiver | receiver | transmitter

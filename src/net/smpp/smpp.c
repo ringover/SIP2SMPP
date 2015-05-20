@@ -614,15 +614,18 @@ int smpp_wait_client(socket_t *sock, char **ip_remote, int *port_remote){
  * SMPP BIND Client
  */
 
-#define _init_pdu_bind(bind, user, passwd, system_type, ton_src, npi_src) \
+#define _init_pdu_bind(bind, user, passwd, system_type, ton_src, npi_src, address_range) \
     memcpy((void*)bind.system_id,(void*)user,sizeof(bind.system_id)); \
     memcpy((void*)bind.password,(void*)passwd,sizeof(bind.password)); \
     memcpy((void*)bind.system_type,(void*)system_type,sizeof(bind.system_type)); \
     bind.interface_version = SMPP_VERSION; \
     bind.addr_ton          = ton_src; \
-    bind.addr_npi          = npi_src; \ 
+    bind.addr_npi          = npi_src; \
+    if(address_range && strlen(address_range) > 0){ \
+        memcpy((void*)bind.address_range,(void*)address_range,sizeof(bind.address_range)); \
+    }
 
-int smpp_send_bind_client(socket_t *sock, int command_id, char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src, unsigned int *sequence_number){
+int smpp_send_bind_client(socket_t *sock, int command_id, char *ip_remote, unsigned int port_remote, unsigned char *user, unsigned char *passwd, unsigned char *system_type, int ton_src, int npi_src, char *address_range, unsigned int *sequence_number){
     int ret = -1;
     bind_t bind;
     memset(&bind, 0, sizeof(bind));
@@ -638,13 +641,13 @@ int smpp_send_bind_client(socket_t *sock, int command_id, char *ip_remote, unsig
     //Init bidn
     switch(command_id){
         case BIND_TRANSCEIVER :
-            _init_pdu_bind(bind.transceiver, user, passwd, system_type, ton_src, npi_src)
+            _init_pdu_bind(bind.transceiver, user, passwd, system_type, ton_src, npi_src, address_range)
             break;
         case BIND_RECEIVER :
-            _init_pdu_bind(bind.receiver, user, passwd, system_type, ton_src, npi_src)
+            _init_pdu_bind(bind.receiver, user, passwd, system_type, ton_src, npi_src, address_range)
             break;
         case BIND_TRANSMITTER :
-            _init_pdu_bind(bind.transmitter, user, passwd, system_type, ton_src, npi_src)
+            _init_pdu_bind(bind.transmitter, user, passwd, system_type, ton_src, npi_src, address_range)
             break;
     }
 
