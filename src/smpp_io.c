@@ -10,7 +10,7 @@
 #ifndef _strncpy
 #define _strncpy(dst, src, size) \
     dst = (char*)calloc(size+1, sizeof(char)); \
-    strncpy(dst, src, size)
+    memcpy(dst, src, size)
 #endif /*_strncpy*/
 
 map *map_session_smpp;//<uint(sequence_number), smpp_data_t>
@@ -211,6 +211,7 @@ int smpp_start_connection(config_smpp_t *p_config_smpp){
             INFO(LOG_SCREEN | LOG_FILE, "Wait SMPP connection of %s:%d", p_config_smpp->ip, p_config_smpp->port)
         }else{
             free(sequence_number);
+            return (int) -1;
         }
         return (int) 0;
     }
@@ -219,10 +220,12 @@ int smpp_start_connection(config_smpp_t *p_config_smpp){
 
 int smpp_end_connection(config_smpp_t *p_config_smpp){
     if(p_config_smpp && p_config_smpp->status == SMPP_CONNECT && p_config_smpp->sock){
-        //TODO: smpp_send_unbind(p_config_smpp->sock,);
+//        int sequence_number = 0;
+//        smpp_send_unbind(p_config_smpp->sock, &sequence_number);
         tcp_close(p_config_smpp->sock);
         p_config_smpp->status = SMPP_DISCONNECT;
         free(p_config_smpp->sock);
+        p_config_smpp->sock = NULL;
         return (int) 0;
     }
     INFO(LOG_SCREEN | LOG_FILE,"smpp already disconnect")
@@ -246,8 +249,8 @@ int smpp_restart_connection(config_smpp_t *p_config_smpp){
         _strncpy(src, (char*)smt->source_addr, size); \
         size = strlen((char*)smt->destination_addr); \
         _strncpy(dst, (char*)smt->destination_addr, size); \
-        if(smt->short_message && (size = strlen((char*)smt->short_message)) > 0){ \
-            _strncpy(msg, (char*)smt->short_message, size); \
+        if(smt->short_message && smt->sm_length > 0){ \
+            _strncpy(msg, (char*)smt->short_message, smt->sm_length); \
         }else if(smt->tlv->tag == TLVID_message_payload && smt->tlv->length > 0){ \
             _strncpy(msg, smt->tlv->value.octet, smt->tlv->length); \
         }else{ \
@@ -472,7 +475,7 @@ int smpp_engine(config_smpp_t *p_config_smpp){
     void **data = NULL;
     void *data_smpp = NULL;
 
-    if((ret = smpp_scan_sock(p_config_smpp->sock, &data_smpp)) != -1){
+    if((ret = smpp_scan_sock(p_config_smpp->sock, &data_smpp)) > 0){
         data = (void**)calloc(3, sizeof(void*));
         data[0] = data_smpp;
         data[1] = p_config_smpp;

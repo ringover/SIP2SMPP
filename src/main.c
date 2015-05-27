@@ -79,7 +79,7 @@ void usage(int8_t value){
     printf("%s    -h  %s: help\n", CYAN, END_COLOR);
     printf("%s    -v  %s: show version\n", CYAN, END_COLOR);
     printf("%s    -D  %s: debug level (0-8)\n", CYAN, END_COLOR);
-    printf("%s    -f  %s: use fork (parameter 1) | Not implemented\n", CYAN, END_COLOR);
+    printf("%s    -f  %s: use fork\n", CYAN, END_COLOR);
     printf("%s    -P  %s: PID file. Default PID file is [%s]\n", CYAN, END_COLOR, DEFAULT_PIDFILE);
     printf("%s    -c  %s: config file to use to specify some options. Default location is [%s]\n", CYAN, END_COLOR, DEFAULT_CONFIG);
     printf("%s    -l  %s: log file to use to specify some options. Default location is [%s]\n", CYAN, END_COLOR, DEFAULT_CONFIG);
@@ -103,11 +103,17 @@ pthread_t listen_smpp;
 *  \brief This function is used for transfer all SMS received to the DB (SMPP->SIP)
 */
 static void* func_listen_smpp(void *data){
+    char cpt = 0;
     config_smpp_t *p_socket = (config_smpp_t*)data;
 
-    smpp_start_connection(p_socket);
-
-    while(smpp_engine(p_socket) != -1);
+    while(cpt++ <= 60){
+        if(smpp_start_connection(p_socket) != -1){
+            cpt = 0;
+            while(smpp_engine(p_socket) > 0);
+        }
+        sleep(cpt);
+        smpp_end_connection(p_socket);
+    }
     return NULL;
 }
 
@@ -217,7 +223,7 @@ int main(int argc, char **argv){
     init_maps();
     init_call_id(NULL);
  
-    while((c=getopt(argc, argv, "c:vp:fhD:"))!=-1) {
+    while((c=getopt(argc, argv, "c:vP:fhD:"))!=-1) {
         switch(c) {
             case 'c':
                     conffile = optarg;

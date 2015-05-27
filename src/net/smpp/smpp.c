@@ -631,7 +631,7 @@ int smpp_send_bind_client(socket_t *sock, int command_id, char *ip_remote, unsig
     memset(&bind, 0, sizeof(bind));
 
     if((ret = tcp_socket_client(sock, ip_remote, port_remote)) == -1){
-        ERROR(LOG_SCREEN | LOG_FILE, "Bind SMPP client failed because the TCP connection failed")
+        ERROR(LOG_SCREEN | LOG_FILE, "Bind SMPP client failed because the TCP connection failed - Error[%d]", ret)
         return (int) ret;
     }
 
