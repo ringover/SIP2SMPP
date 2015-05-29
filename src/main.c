@@ -97,8 +97,6 @@ config_smpp_t *p_config_smpp = NULL;
 *  Thread SMPP
 */
 
-pthread_t listen_smpp;
-
 /**
 *  \brief This function is used for transfer all SMS received to the DB (SMPP->SIP)
 */
@@ -121,8 +119,6 @@ static void* func_listen_smpp(void *data){
 *  Thread SIP
 */
 
-pthread_t listen_sip;
-
 /**
 *  \brief This function is used for transfer all SMS received to the SMS listend FIFO (SIP)
 */
@@ -141,22 +137,6 @@ void init_maps(){
     map_session_sip  = new_map(free_string, NULL, compare_string, free_sip_session,  NULL, NULL);
     //map used for save all sm in transation in memory
     map_sm           = new_map(free_uint32, NULL, compare_uint32, free_sm_data, NULL, NULL);
-}
-
-void start_all_sockets_interfaces(){
-    iterator_map *p_it = cfg_sip ? cfg_sip->begin : NULL;
-    while(p_it){
-        config_sip_t *p_config_sip = (config_sip_t*)p_it->value;
-        sip_start_connection(p_config_sip);
-        p_it = p_it->next;
-    }
-    p_it = cfg_smpp ? cfg_smpp->begin : NULL;
-    while(p_it){
-        config_smpp_t *p_config_smpp = (config_smpp_t*)p_it->value;
-        smpp_start_connection(p_config_smpp);
-        p_it = p_it->next;
-    }
-    return;
 }
 
 map *m_threads = NULL;
@@ -318,8 +298,6 @@ int main(int argc, char **argv){
     printf("Config File         [%s]\n", conffile);
 
     display_config_file(CONFIG_ALL, NULL);
-
-    start_all_sockets_interfaces();
 
     start_all_threads_interfaces();
 

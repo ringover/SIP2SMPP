@@ -211,10 +211,12 @@ int smpp_start_connection(config_smpp_t *p_config_smpp){
             INFO(LOG_SCREEN | LOG_FILE, "Wait SMPP connection of %s:%d", p_config_smpp->ip, p_config_smpp->port)
         }else{
             free(sequence_number);
+            ERROR(LOG_SCREEN | LOG_FILE, "SMPP BIND Failed");
             return (int) -1;
         }
         return (int) 0;
     }
+    ERROR(LOG_SCREEN | LOG_FILE, "SMPP connection failed");
     return (int) -1;
 }
 
