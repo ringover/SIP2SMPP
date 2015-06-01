@@ -199,8 +199,8 @@ inline int str_to_ton(const char *str){
 
 //Display trame SMPP
 static inline int _dump_pdu_and_buf(char *buffer, int len, void* data, char *communication_mode){
-    int ret = -1;
     if(log_get_display() >= LOG_INFO && buffer && len > 0 && communication_mode && data){
+        int ret = 0;
         unsigned char print_buffer[8192] = { 0 };
         //Print Buffer
         memset(print_buffer, 0, sizeof(print_buffer));
@@ -221,7 +221,7 @@ static inline int _dump_pdu_and_buf(char *buffer, int len, void* data, char *com
                          "-----------------------------------------------------------\n", communication_mode, print_buffer)
         return (int) 1;
     }
-    return (int) ret;
+    return (int) 1;
 }
 
 

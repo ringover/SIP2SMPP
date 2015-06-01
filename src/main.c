@@ -101,15 +101,21 @@ config_smpp_t *p_config_smpp = NULL;
 *  \brief This function is used for transfer all SMS received to the DB (SMPP->SIP)
 */
 static void* func_listen_smpp(void *data){
-    char cpt = 0;
+/*
+    config_smpp_t *p_socket = (config_smpp_t*)data;
+    smpp_start_connection(p_socket);
+    while(smpp_engine(p_socket) > 0);
+    return NULL;
+*/
+    char cpt = 1;
     config_smpp_t *p_socket = (config_smpp_t*)data;
 
-    while(cpt++ <= 60){
+    while(cpt <= 60){
         if(smpp_start_connection(p_socket) != -1){
-            cpt = 0;
+            cpt = 1;
             while(smpp_engine(p_socket) > 0);
         }
-        sleep(cpt);
+        sleep(cpt++);
         smpp_end_connection(p_socket);
     }
     return NULL;
@@ -194,6 +200,8 @@ int main(int argc, char **argv){
     int nofork = 1;
     char str[100];
     int c = 0;
+    char b_log  = 1;
+    char b_fork = 1;
     memset(&str, 0, 100*sizeof(char));
     log_init("logFile",NULL);
     log2display(LOG_ALERT);
@@ -217,7 +225,7 @@ int main(int argc, char **argv){
                     break;
             case 'f':
                     nofork = 0;
-                    log2display(LOG_NONE);
+                    b_fork = 0;
                     break;
             case 'h':
                     usage(0);
@@ -226,8 +234,8 @@ int main(int argc, char **argv){
                     {
                       char log = atoi(optarg);
                       if(log >= 0 && log <= 8){
-                         printf("%d\n",log);
                          log2display((Loglevel)log);
+                         b_log = 0;
                       }
                       break;
                     }
@@ -252,6 +260,14 @@ int main(int argc, char **argv){
         ERROR(LOG_FILE | LOG_SCREEN,"There are errors in the INI file!");
         free_config_file(CONFIG_ALL, NULL);
         handler(-1);
+    }
+
+    if(b_log){
+        log2display((Loglevel)cfg_main->log_level);
+    }
+
+    if(b_fork){
+        nofork = !cfg_main->fork;
     }
 
     if(daemonize(nofork) != 0){
