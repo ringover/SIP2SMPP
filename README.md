@@ -12,22 +12,32 @@ Version 0.2.0
 
   apt-get install sqlite3 libsqlite3-dev libsqlite3-0 libdbd-sqlite3
   
-  After you have to install the libraries "libsmpp34" and "libzdb v3.0" :
+  After you have to install the libraries libsmpp34, libiconv and libzdb v3.0 :
 
 > https://github.com/bjtpartners/libsmpp34
 
     ./configure
     make
     make install
+    ldconfig
+
+Download and install Libiconv : http://www.gnu.org/software/libiconv/#downloading
+
+    ./configure --prefix=/usr/local
+    make
+    make install
+    ldconfig
 
 Download and install LibZDB : http://www.tildeslash.com/libzdb/#
 
     ./configure
     make
     make install
+    ldconfig
 
 Now, build the project :
-      
+
+    ldconfig
     ./configure
     make
     make install
@@ -71,10 +81,14 @@ v0.3.0 (X : not implemented | V : implemented | ~ : in progress) :
 * ~ : bind receiver & transmitter with SMPP
 * V : Routing mode
 * V : Possibility of using many interfaces (SMPP and SIP)
+* V : Receive sar_msg and reconstituting all segments
+* V : Converting another data_coding to UTF-8
+* X : Add INI parameters for to manage this parameter : data_coding
+* X : Add INI parameters for to have a choice of payload_message or sar_msg
 
 v0.4.0 (X : not implemented | V : implemented | ~ : in progress) : 
 * X : reload configuration file (SIP or SMPP interfaces, routing module ...)
 * X : Use libev
 
 v0.5.0 (X : not implemented | V : implemented | ~ : in progress) : 
-* X : SIGTRAN module
+* ~ : SIGTRAN module

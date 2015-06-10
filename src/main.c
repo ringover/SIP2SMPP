@@ -143,6 +143,8 @@ void init_maps(){
     map_session_sip  = new_map(free_string, NULL, compare_string, free_sip_session,  NULL, NULL);
     //map used for save all sm in transation in memory
     map_sm           = new_map(free_uint32, NULL, compare_uint32, free_sm_data, NULL, NULL);
+    //map used for sar msg
+    map_sar_msg      = new_map(free_uint16, NULL, compare_uint16, free_tab_string, NULL, NULL);
 }
 
 map *m_threads = NULL;

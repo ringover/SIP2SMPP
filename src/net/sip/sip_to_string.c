@@ -132,8 +132,8 @@ int sip_message_to_string(sip_message_t *p_sip, char **p_buffer, bool request){
             max++;
         }
         imp = (char**)calloc(max+1, sizeof(char*));
-        for(i=0;i<max;i++){
-            imp[i] = calloc(128, sizeof(char));
+        for(i=0;i<max-1;i++){
+            imp[i] = calloc(256, sizeof(char));
         }
         i = 0;
 
@@ -153,11 +153,12 @@ int sip_message_to_string(sip_message_t *p_sip, char **p_buffer, bool request){
         if(request && strcmp(p_sip->method, MESSAGE_STR) == 0){
             //spacement
             i++;
-            strcpy(imp[i++], p_sip->message);
+            imp[i] = calloc(p_sip->content_length+1, sizeof(char));
+            strncpy(imp[i], p_sip->message, p_sip->content_length);
         }
         implode(imp, "\r\n", p_buffer);
         for(i=0;i<max;i++){
-            free(imp[i]);
+            if(imp[i]) free(imp[i]);
         }
         free(imp);
         return (int) 0;

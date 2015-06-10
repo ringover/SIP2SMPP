@@ -133,7 +133,7 @@ void init_sip_message_t(sip_message_t *p_message, char *version, char *method, i
         }
         p_message->content_length = content_length;
         if(message){
-            _strcpy(p_message->message, message);
+            _strncpy(p_message->message, message,content_length);
         }
     }
     return;

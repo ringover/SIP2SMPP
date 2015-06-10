@@ -77,8 +77,7 @@ inline int  implode(char **p_p_str_in, char *glue, char **str_out){
       i++;
     }
 
-    *str_out = (char*)malloc(sizeof(char)*(size_str_out+1));
-    memset(*str_out,0,sizeof(char)*(size_str_out+1));
+    *str_out = (char*)calloc(size_str_out+1, sizeof(char));
     i=0;
 
     while(p_p_str_in[i]){

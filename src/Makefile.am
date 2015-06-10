@@ -1,6 +1,6 @@
 
 AM_CFLAGS = -fPIC -Wall -pedantic
-AM_LDFLAGS = -pthread -lzdb -lsmpp34 -lrt -ldl
+AM_LDFLAGS = -pthread -lzdb -lsmpp34 -lrt -ldl -liconv
 
 bin_PROGRAMS = sip2smpp
 sip2smpp_SOURCES = main.c \
@@ -26,5 +26,6 @@ sip2smpp_SOURCES = main.c \
                    net/smpp/smpp.c \
                    net/tcp/tcp.c \
                    net/udp/udp.c \
+                   conv/conv.c \
                    threadpool/threadpool.c
 

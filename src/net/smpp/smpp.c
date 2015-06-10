@@ -434,7 +434,7 @@ inline int smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned i
     if(sock && sequence_number){
         generic_nack_t gen = { 0 };
         _init_pdu_header((void*)&gen, command_id, command_status, *sequence_number);
-        if(*sequence_number == 0){//Response or Request
+        if(sequence_number && *sequence_number == 0){//Response or Request
             *sequence_number = gen.sequence_number;
         }
         ret = _smpp_pack_and_send(sock, (void*)&gen);

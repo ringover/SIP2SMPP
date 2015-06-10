@@ -21,6 +21,7 @@
 #include "net/sip/sip.h"
 #include "sip_io.h"
 #include "net/smpp/smpp.h"
+#include "conv/conv.h"
 
 #include "linked_list/map.h"
 #include "linked_list/keys.h"
@@ -104,6 +105,10 @@ inline void display_config_smpp(config_smpp_t *smpp);
 
 extern map  *cfg_smpp; // <str, config_smpp_t>
 
+///////////////////////
+
+extern map *map_sar_msg; 
+ 
 ///////////////////////
 
 extern map *map_session_smpp;//<uint(sequence_number), smpp_session_t>

@@ -243,7 +243,7 @@ int smpp_restart_connection(config_smpp_t *p_config_smpp){
 // SMPP PROCESSING
 /////
 
-
+/*
 #define copy_sm(type, data, src, dst, msg) \
     { \
         type *smt = (type*)data; \
@@ -261,6 +261,108 @@ int smpp_restart_connection(config_smpp_t *p_config_smpp){
             free(dst); \
         } \
     } 
+*/
+#define search_tlv(tlv, value) \
+	while(tlv && tlv->tag != value){ \
+		tlv = tlv->next; \
+	}
+
+#define copy_sms(sms_in,sms_length,data_coding,sms_out) \
+	{ \
+		char *msg_out = NULL; \
+		if(data_coding != 0){ \
+			if(conv_char_codec_str(sms_in, (size_t)sms_length, tab_codec[data_coding], &msg_out, (size_t)sms_length, "UTF-8") == -1){ \
+				if(msg_out){ \
+					/*free(msg_out);*/ \
+					/*msg_out = NULL;*/ \
+				} \
+				WARNING(LOG_SCREEN, "Converting coding SMS is failed") \
+				/*return (int) -1;*/ \
+			} \
+			sms_out = msg_out; \
+		}else{ \
+			_strncpy(sms_out, sms_in, sms_length); \
+		} \
+	}
+
+map *map_sar_msg = NULL; 
+
+int smpp_get_sms_deliver_sm(deliver_sm_t *smt, char **src, char **dst, char **msg){
+    tlv_t *tlv = smt->tlv;
+    size_t size = strlen((char*)smt->source_addr);
+    _strncpy(*src, (char*)smt->source_addr, size);
+    size = strlen((char*)smt->destination_addr);
+    _strncpy(*dst, (char*)smt->destination_addr, size);
+    if(smt->short_message && smt->sm_length > 0){
+        //The reference number for a particular concatenated short message.
+        search_tlv(tlv, TLVID_sar_msg_ref_num)
+        if(tlv && tlv->tag == TLVID_sar_msg_ref_num){
+            char    **sar_msg   = NULL;
+            uint16_t *ref_num   = 0;
+            uint16_t  total_seg = 0;
+            iterator_map *p_it = map_find(map_sar_msg, &(tlv->value.val16));
+            if(p_it){
+                ref_num = (uint16_t*)p_it->key;
+                sar_msg = (char**)p_it->value;
+            }else{
+                ref_num = new_uint16();
+               *ref_num = (uint16_t)tlv->value.val16;
+            }
+            
+            //Indicates the total number of short messages within the concatenated short message
+            tlv = smt->tlv;
+            search_tlv(tlv, TLVID_sar_total_segments) 
+            if(tlv && tlv->tag == TLVID_sar_total_segments){
+                total_seg = tlv->value.val08;
+                if(sar_msg == NULL){
+                    sar_msg = calloc(total_seg+1, sizeof(char*));
+                }
+            }else{
+                WARNING(LOG_SCREEN | LOG_FILE, "TLVID_sar_total_segments missing")
+            }
+
+            // Indicates the sequence number of a particular short message fragment within the concatenated short message
+            tlv = smt->tlv;
+            search_tlv(tlv, TLVID_sar_segment_seqnum)
+            if(sar_msg && tlv && tlv->tag == TLVID_sar_segment_seqnum){
+                int i = 0;
+                if(sar_msg[tlv->value.val08 - 1] == NULL){
+                    copy_sms(smt->short_message,smt->sm_length,smt->data_coding,sar_msg[tlv->value.val08-1]);
+                }
+                while(sar_msg[i]){ i++; }
+                if(total_seg == i){
+                    if(implode(sar_msg, "", msg) != 0){
+                        ERROR(LOG_SCREEN,"Implode msg failed")
+                    }
+                    map_erase(map_sar_msg, ref_num);
+                    return (int) 0;
+                }
+            }else{
+                WARNING(LOG_SCREEN | LOG_FILE, "TLVID_sar_segment_seqnum missing")
+            }
+            if(p_it == NULL){
+                map_set(map_sar_msg, ref_num, sar_msg);
+            }
+            return (int) 1;
+        }else{
+           //_strncpy(*msg, (char*)smt->short_message, smt->sm_length);
+           copy_sms(smt->short_message,smt->sm_length,smt->data_coding,*msg);
+           return (int) 0;
+        }
+    }else{
+        search_tlv(tlv, TLVID_message_payload)
+        if(tlv && tlv->tag == TLVID_message_payload && tlv->length > 0){
+            copy_sms(tlv->value.octet,tlv->length,smt->data_coding,*msg);
+            //_strncpy(*msg, tlv->value.octet, tlv->length);
+        }else{
+            WARNING(LOG_SCREEN | LOG_FILE, "Short message empty")
+            return (int) -1;
+        }
+        return (int) 0;
+    }
+    return (int) -1;
+}
+
 
 //int smpp_processing_request_sm(unsigned *interface, unsigned char *ip_repote, unsigned int port_remote, const void *data){
 int smpp_recv_processing_request_sm(socket_t *sock, char *interface, char *ip_remote, unsigned int port_remote, void *data){
@@ -271,10 +373,18 @@ int smpp_recv_processing_request_sm(socket_t *sock, char *interface, char *ip_re
         generic_nack_t *req = (generic_nack_t*)data;
         switch(req->command_id){
             case DELIVER_SM : //client
-                copy_sm(deliver_sm_t, data, p_sm->src, p_sm->dst, p_sm->msg);
-                break;
+            {
+                //copy_sm(deliver_sm_t, data, p_sm->src, p_sm->dst, p_sm->msg);
+                int ret = 0;
+                deliver_sm_t *smt = (deliver_sm_t*)data;
+                if((ret = smpp_get_sms_deliver_sm(smt, &(p_sm->src), &(p_sm->dst), &(p_sm->msg))) == 1){
+                    smpp_send_response(sock, req->command_id | GENERIC_NACK, ESME_ROK, &req->sequence_number);
+                }else if(ret == -1){
+                    smpp_send_response(sock, req->command_id | GENERIC_NACK, ESME_ROK, &req->sequence_number);//ESME_RINVDCS
+                }
+            }   break;
             case SUBMIT_SM : //server
-                copy_sm(submit_sm_t, data, p_sm->src, p_sm->dst, p_sm->msg);
+                //copy_sm(submit_sm_t, data, p_sm->src, p_sm->dst, p_sm->msg);
                 break;
             case SUBMIT_MULTI :
                 smpp_send_response(sock, req->command_id & GENERIC_NACK, ESME_RINVCMDID, req->sequence_number);
@@ -328,7 +438,7 @@ int smpp_recv_processing_request(socket_t *sock, const void *req){
             case QUERY_SM :
             {   //TODO
                 query_sm_t *query = (query_sm_t*)req;
-                ret = smpp_send_response(sock, QUERY_SM_RESP, &query->sequence_number, ESME_RINVCMDID);
+                ret = smpp_send_response(sock, QUERY_SM_RESP, ESME_RINVCMDID, &query->sequence_number);
                 INFO(LOG_SCREEN, "QUERY_SM not allowed")
             }   break;
             case REPLACE_SM :
@@ -361,7 +471,7 @@ int smpp_recv_processing_request(socket_t *sock, const void *req){
                 smpp_send_bind_transceiver_resp(sock, p_bind->system_id, p_bind->sequence_number, ESME_ROK, false);
             }   break;
             default:
-            {   ret = smpp_send_response(sock, DATA_SM_RESP, &((generic_nack_t*)req)->sequence_number, ESME_RINVCMDID);
+            {   ret = smpp_send_response(sock, DATA_SM_RESP, ESME_RINVCMDID, &((generic_nack_t*)req)->sequence_number);
                 ERROR(LOG_SCREEN | LOG_FILE ,"Request not allowed [%d:%d]", ((generic_nack_t*)req)->command_id, ((generic_nack_t*)req)->command_status)
             }   break;
         }
