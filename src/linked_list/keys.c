@@ -77,10 +77,11 @@ void* copy_uint32(const void *data){
 }
 
 int compare_uint32(const void *data1, const void *data2){
-    unsigned int i1, i2;
-    memcpy(&i1,data1,sizeof(unsigned int));
-    memcpy(&i2,data2,sizeof(unsigned int));
-    return (int) (i1-i2);
+    uint32_t i1, i2;
+    memcpy(&i1,data1,sizeof(uint32_t));
+    memcpy(&i2,data2,sizeof(uint32_t));
+//printf("%d-%d = %d\n", i1, i2, i1-i2);
+    return (int) ((int)i1-(int)i2);
 }
 
 ///////////////////////

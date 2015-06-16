@@ -13,6 +13,8 @@
 #include "../sip_io.h"
 #include "../database.h"
 
+#include "../conv/conv.h"
+
 #include "../log/log.h"
 #include "../type_projet.h"
 #include "../linked_list/map.h"
@@ -44,6 +46,7 @@
 #define STR_FORK            "fork"
 #define STR_LAUNCH_MSG      "launch_msg"
 #define STR_ROUTING_MODULE  "routing_module"
+#define STR_SYSTEM_CHARSET  "system_charset"
 //SMPP(client/server)
 #define STR_LIST_INTERFACE  "list_interface"
 #define STR_BIND            "bind"
@@ -52,11 +55,17 @@
 #define STR_SYSTEM_ID       "system_id"
 #define STR_PASSWORD        "password"
 #define STR_SYSTEM_TYPE     "system_type"
+#define STR_SERVICE_TYPE    "service_type"
 #define STR_TON             "type_of_number"
 #define STR_NPI             "numeric_plan_indicator"
 #define STR_CLIENTS         "clients"
+#define STR_DEFAULT_CODING  "default_data_coding"
+//SIP - SMPP (- SIGTRAN)
+#define STR_DATA_CODING     "data_coding"
 //TODO : SIGTRAN
 //...
+
+#define MAX_DATA_CODING     MAX_TAB_CHARSET
 
 typedef enum _enum_config_load{
     CONFIG_MAIN     = 0x01,
@@ -72,6 +81,7 @@ typedef struct _config_main{
     char    log_level;
     char    *launch_msg;
     bool    fork;
+    char    *system_charset;
     char    *routing_module;
 } config_main_t;
 #define new_config_main()   (config_main_t*)calloc(1, sizeof(config_main_t))

@@ -92,6 +92,7 @@ static inline int _load_config_main(void){
     int  error           = 0;
     char loglevel[15]    = { 0 };
     char launch_msg[256] = { 0 };
+    char system_charset[32]  = { 0 };
     char routing_module[256] = { 0 };
 
     destroy_config_main(&_main);
@@ -110,6 +111,9 @@ static inline int _load_config_main(void){
     if(strcmp(launch_msg, "none") != 0){
         _strcpy(_main.launch_msg, launch_msg);
     }
+
+    ini_gets(STR_MAIN, STR_SYSTEM_CHARSET, DEFAULT_SYSTEM_CHARSET, system_charset, sizearray(system_charset), conffile);
+    _strcpy(_main.system_charset, system_charset);
     
     if((error = _check_config_main()) != -1){
         memcpy(cfg_main, &_main, sizeof(config_main_t));
@@ -164,12 +168,14 @@ static inline int _load_config_interface_sigtran(const char *name){
 }
 */
 static inline int _load_config_interface_client_smpp(const char *name){
-    int   error             = 0;
-    char  ip[17]            = { 0 };  //Remote is client/Host if server
-    char  system_id[17]     = { 0 };  //User ID
-    char  password[10]      = { 0 };  //Passwd
-    char  address_range[41] = { 0 };  //Routing to
-    char  routing_to[25]    = { 0 };  //Routing to
+    int   error               = 0;
+    char  ip[17]              = { 0 };  //Remote is client/Host if server
+    char  system_id[17]       = { 0 };  //User ID
+    char  password[10]        = { 0 };  //Passwd
+    char  address_range[41]   = { 0 };  //Routing to
+    char  data_coding[16][32] = { 0 };  //Data coding
+    int   default_charset     = 0;      //Data coding
+    char  routing_to[25]      = { 0 };  //Routing to
 
     destroy_config_client_smpp(&_c_smpp);
 
@@ -203,6 +209,18 @@ static inline int _load_config_interface_client_smpp(const char *name){
         _strcpy(_c_smpp.address_range, address_range);
     }
 
+    {
+        int i = 0;
+        for(;i < MAX_DATA_CODING;i++){
+    	    char tag_name[16] = { 0 };
+            sprintf(tag_name,STR_DATA_CODING"_%d",i);
+            ini_gets(name,tag_name,tab_default_charset[i],data_coding[i],sizearray(data_coding[i]),conffile);
+            _strcpy(_c_smpp.data_coding[i], data_coding[i]);
+        }
+    }
+
+    _c_smpp.default_data_coding = (int)ini_getl(name, STR_DEFAULT_CODING, 0, conffile);
+
     ini_gets(name, STR_ROUTING_TO, "none", routing_to, sizearray(routing_to), conffile);
     if(strcmp(routing_to, "none") != 0){
         _strcpy(_c_smpp.routing_to, routing_to);
@@ -226,19 +244,21 @@ static inline int _load_config_interface_client_smpp(const char *name){
 }
 
 static inline int _load_config_interface_smpp(const char *name){
-    int   error             = 0;
-    char  model[8]          = { 0 };    //client | server
-    char  ip[16]            = { 0 };    //Remote is client/Host if server
-    char  system_id[17]     = { 0 };    //User ID
-    char  password[10]      = { 0 };    //Passwd
-    char  ton[20]           = { 0 };    //type_of_number
-    char  npi[20]           = { 0 };    //numeric_plan_indicator
-    char  system_type[10]   = { 0 };    //WWW | EMAIL | VMS | OTA ...
-    char  command_id[15]    = { 0 };    //bind : transceiver | receiver | transmitter
-    //char  service_type[20] = { 0 };
-    char  address_range[41]  = { 0 };  //Routing to
-    char  routing_to[25]     = { 0 };    //Routing to - Only if client model
-    char  list_clients[1024] = { 0 };
+    int   error               = 0;
+    char  model[8]            = { 0 };   //client | server
+    char  ip[16]              = { 0 };   //Remote is client/Host if server
+    char  system_id[17]       = { 0 };   //User ID
+    char  password[10]        = { 0 };   //Passwd
+    char  ton[20]             = { 0 };   //type_of_number
+    char  npi[20]             = { 0 };   //numeric_plan_indicator
+    char  system_type[10]     = { 0 };   //WWW | EMAIL | VMS | OTA ...
+    char  command_id[16]      = { 0 };   //bind : transceiver | receiver | transmitter
+    char  service_type[6]    = { 0 };
+    char  address_range[41]   = { 0 };   //Routing to
+    char  routing_to[25]      = { 0 };   //Routing to - Only if client model
+    char  list_clients[1024]  = { 0 };
+    char  data_coding[16][32] = { 0 };   //Data coding
+    int   default_charset     = 0;       //Data coding
 
     destroy_config_smpp(&_smpp);
 
@@ -274,6 +294,9 @@ static inline int _load_config_interface_smpp(const char *name){
 //    _smpp.ton_src = str_to_ton(ton);
 //    _smpp.ton_dst = _smpp.ton_src;
 
+    ini_gets(name, STR_SERVICE_TYPE, "", service_type, sizearray(service_type), conffile); 
+    _strcpy(_smpp.service_type, service_type);
+
     ini_gets(name, STR_SYSTEM_TYPE, "WWW", system_type, sizearray(system_type), conffile);
     _strcpy(_smpp.system_type, system_type);
 
@@ -284,6 +307,18 @@ static inline int _load_config_interface_smpp(const char *name){
     if(strcmp(address_range, "none") != 0){
         _strcpy(_smpp.address_range, address_range);
     }
+
+    {
+        int i = 0;
+        for(;i < MAX_DATA_CODING;i++){
+    	    char tag_name[16] = { 0 };
+            sprintf(tag_name,STR_DATA_CODING"_%d",i);
+            ini_gets(name,tag_name,tab_default_charset[i],data_coding[i],sizearray(data_coding[i]),conffile);
+            _strcpy(_smpp.data_coding[i], data_coding[i]);
+        }
+    }
+
+    _smpp.default_data_coding = (int)ini_getl(name, STR_DEFAULT_CODING, 0, conffile);
 
     ini_gets(name, STR_ROUTING_TO, "none", routing_to, sizearray(routing_to), conffile);
     if(strcmp(routing_to, "none") != 0){

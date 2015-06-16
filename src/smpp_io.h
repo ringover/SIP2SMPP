@@ -55,36 +55,39 @@ void free_smpp_session(void **data);
 //////
 
 typedef struct _config_client_smpp{
-    char         *name;           //Interface name
-    socket_t     *sock;           //socket smpp
-    char         *ip;             //Remote is client/Host if server
-    unsigned int  port;           //Remote is client/Host if server
-    char         *system_id;      //User ID
-    char         *password;       //Passwd
-    char          npi;            //numeric_plan_indicator
-    char          ton;            //type_of_number
-    char         *address_range;  //Address Range
-    char         *routing_to;     //Routing to
+    char         *name;            //Interface name
+    socket_t     *sock;            //socket smpp
+    char         *ip;              //Remote is client/Host if server
+    unsigned int  port;            //Remote is client/Host if server
+    char         *system_id;       //User ID
+    char         *password;        //Passwd
+    char          npi;             //numeric_plan_indicator
+    char          ton;             //type_of_number
+    char         *address_range;   //Address Range
+    int           default_data_coding; //Data coding
+    char         *data_coding[16]; //Data coding
+    char         *routing_to;      //Routing to
 } config_client_smpp_t;
 #define new_config_client_smpp()   (config_client_smpp_t*)calloc(1, sizeof(config_client_smpp_t))
 
 typedef struct _config_smpp{
-    char         *name;           //Interface name
-    sock_model_t  model;          //client | server
-    bool          status;         //connect/Disconnect
-    socket_t     *sock;           //socket smpp
-    char         *ip;             //Remote is client/Host if server
-    unsigned int  port;           //Remote is client/Host if server
-    char         *system_id;      //User ID
-    char         *password;       //Passwd
-    char          npi;            //numeric_plan_indicator
-    char          ton;            //type_of_number
-    char         *address_range;  //Address Range
-    char         *system_type;    //WWW | EMAIL | VMS | OTA ...
-    char         *service_type;   //The service_type parameter can be used to indicate the SMS Application service associated with the message
-    int           command_id;     //bind : transceiver | receiver | transmitter
-
-    char         *routing_to;     //Routing to - Only if client model
+    char         *name;            //Interface name
+    sock_model_t  model;           //client | server
+    bool          status;          //connect/Disconnect
+    socket_t     *sock;            //socket smpp
+    char         *ip;              //Remote is client/Host if server
+    unsigned int  port;            //Remote is client/Host if server
+    char         *system_id;       //User ID
+    char         *password;        //Passwd
+    char          npi;             //numeric_plan_indicator
+    char          ton;             //type_of_number
+    char         *address_range;   //Address Range
+    char         *system_type;     //WWW | EMAIL | VMS | OTA ...
+    char         *service_type;    //The service_type parameter can be used to indicate the SMS Application service associated with the message
+    int           command_id;      //bind : transceiver | receiver | transmitter
+    int           default_data_coding; //Data coding
+    char         *data_coding[16]; //Data coding
+    char         *routing_to;      //Routing to - Only if client model
 
     //Client(s) for server model
     map          *list_c_smpp;    // <str, config_client_smpp_t>
@@ -117,10 +120,10 @@ int smpp_start_connection(config_smpp_t *p_config_smpp);
 int smpp_restart_connection(config_smpp_t *p_config_smpp);
 int smpp_end_connection(config_smpp_t *p_config_smpp);
 
-int smpp_recv_processing_request_sm(socket_t *sock, char *interface, char *ip_remote, unsigned int port_remote, void *data);
+int smpp_recv_processing_request_sm(socket_t *sock, char *interface, char *data_coding[16], char *ip_remote, unsigned int port_remote, void *data);
 int smpp_recv_processing_request(socket_t *sock, const void *req);
 int smpp_recv_processing_response(void *res);
-static void* smpp_recv_processing(void *data);
+//static void* smpp_recv_processing(void *data);
 int smpp_engine(config_smpp_t *p_config_smpp);
 
 int send_sms_to_smpp(unsigned char* interface_name, sm_data_t *p_sm);

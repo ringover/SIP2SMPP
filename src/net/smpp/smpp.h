@@ -94,9 +94,9 @@ inline int smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned i
 
 int smpp_send_enquire_link(socket_t *sock, unsigned int *sequence_number);
 
-int smpp_send_deliver_sm(socket_t *sock, char *from, char *to, char *msg, unsigned int *sequence_number, int src_ton, int src_npi, int dst_ton, int dst_npi);
+int smpp_send_deliver_sm(socket_t *sock, char *from, char *to, char *msg, unsigned int *sequence_number,unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi);
 
-int smpp_send_submit_sm(socket_t *sock, char *from, char *to, char *msg, unsigned int *sequence_number, int src_ton, int src_npi, int dst_ton, int dst_npi);
+int smpp_send_submit_sm(socket_t *sock, char *from, char *to, char *msg, unsigned int *sequence_number, unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi);
 
 int smpp_send_query_sm(socket_t *sock, unsigned int *sequence_number);
 
