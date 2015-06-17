@@ -578,26 +578,27 @@ int send_sms_to_smpp(unsigned char* interface_name, sm_data_t *p_sm){
         unsigned int *k_sequence_number = new_uint32();
         unsigned int data_coding = 0;
         char *msg = NULL;
-        char i = 0;
+        int i = 0;
         smpp_session_t *v_session = new_smpp_session_t();
         generic_nack_t *gen = (generic_nack_t*)calloc(1, sizeof(generic_nack_t));
         
         while(i < 16){
-            if(conv_char_codec_str(p_sm->msg, (size_t)strlen((char*)p_sm->msg), cfg_main->system_charset, &msg, (size_t)0, p_config_smpp->data_coding[i]) != -1){
+            size_t ret = 0;
+            if((ret = conv_char_codec_str(p_sm->msg, (size_t)strlen((char*)p_sm->msg), cfg_main->system_charset, &msg, (size_t)0, p_config_smpp->data_coding[i])) != -1){
                 data_coding = i;
+                i = ret;
                 break;
             }
             i++;
         }
         
-        //......
         gen->sequence_number = get_sequence_number();
         *k_sequence_number = gen->sequence_number;
         v_session->command_id = SUBMIT_SM;
         v_session->p_msg_smpp = gen;
         v_session->p_sm = p_sm;
         map_set(map_session_smpp, k_sequence_number, v_session);
-        ret = smpp_send_submit_sm(p_config_smpp->sock, p_sm->src, p_sm->dst, p_sm->msg, &(gen->sequence_number), data_coding, p_config_smpp->ton, p_config_smpp->npi, p_config_smpp->ton, p_config_smpp->npi);
+        ret = smpp_send_submit_sm(p_config_smpp->sock, p_sm->src, p_sm->dst, msg ? msg : p_sm->msg, i, &(gen->sequence_number), data_coding, p_config_smpp->ton, p_config_smpp->npi, p_config_smpp->ton, p_config_smpp->npi);
     }
     return (int) ret;
 }

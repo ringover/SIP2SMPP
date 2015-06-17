@@ -29,7 +29,7 @@ extern char smpp34_strerror[2048];
 // Static Functions
 //////
 
-static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg, int command_id, unsigned int *sequence_number, unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi);
+static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg, size_t len, int command_id, unsigned int *sequence_number, unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi);
 static inline void _init_pdu_header_(void *data, unsigned int command_id, unsigned int command_status, unsigned int sequence_number);
 static inline int _dump_pdu_and_buf(char *buffer, int len, void* data, char *communication_mode);
 static inline int _smpp_pack_and_send(socket_t *sock, void *data);
@@ -442,7 +442,7 @@ inline int smpp_send_generic(socket_t *sock, unsigned int command_id, unsigned i
     return (int) ret;
 }
 
-static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg, int command_id, unsigned int *sequence_number, unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi){
+static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg, size_t len, int command_id, unsigned int *sequence_number, unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi){
     int ret = -1;
     if(sock && from && to && msg){
         submit_sm_t req = { 0 };
@@ -452,8 +452,6 @@ static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg,
         //Init PDU
         _init_pdu_header((void*)&req, command_id, ESME_ROK, *sequence_number);
         *sequence_number = req.sequence_number;
-
-        req.data_coding  = data_coding;
 
         //Init submit or deliver
         req.source_addr_ton  = src_ton;
@@ -471,27 +469,25 @@ static inline int _smpp_send_sm(socket_t *sock, char *from, char *to, char *msg,
           //snprintf( req.validity_period, TIME_LENGTH, "%s", "");
           //req.registered_delivery = 0;
           //req.replace_if_present_flag =0;
-          //req.data_coding         = 0;
           //req.sm_default_msg_id   = 0;
+          //Add other optional param - sample
+          //tlv.tag = TLVID_user_message_reference;
+          //tlv.length = sizeof(uint16_t);
+          //tlv.value.val16 = 0x0024;
+          //build_tlv( &(req.tlv), &tlv );
 
-        //if message is <255 octets
-          //req.sm_length = strlen((char*)message);
-          //memcpy(req.short_message, message, req.sm_length);
-/*        if(strlen((char*)msg) < 255){
-            req.sm_length = strlen((char*)msg);
+        len = len > 0 ? len : strlen((char*)msg);
+        if(len < 160){
+            req.sm_length = len;
             memcpy(req.short_message, msg, req.sm_length);
-        }else{*/
-            //if message is > 254 octets or > 0 octet
+        }else{
             tlv.tag = TLVID_message_payload;
-            tlv.length = strlen((char*)msg);
+            tlv.length = len;
             memcpy(tlv.value.octet, msg, tlv.length);
-            build_tlv( &(req.tlv), &tlv );
-        //}
-        // Add other optional param - sample
-        //tlv.tag = TLVID_user_message_reference;
-        //tlv.length = sizeof(uint16_t);
-        //tlv.value.val16 = 0x0024;
-        //build_tlv( &(req.tlv), &tlv );
+            build_tlv(&(req.tlv), &tlv);
+        }
+
+        req.data_coding  = data_coding;
 
         ret = _smpp_pack_and_send(sock, (void*)&req);
         destroy_tlv(req.tlv);
@@ -518,12 +514,12 @@ int smpp_send_enquire_link(socket_t *sock, unsigned int *sequence_number){
     return smpp_send_generic(sock, ENQUIRE_LINK, ESME_ROK, sequence_number);
 }
 
-int smpp_send_deliver_sm(socket_t *sock, char *from, char *to, char *msg, unsigned int *sequence_number,unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi){
-    return _smpp_send_sm(sock, from, to, msg, DELIVER_SM, sequence_number, data_coding, src_ton, src_npi, dst_ton, dst_npi);
+int smpp_send_deliver_sm(socket_t *sock, char *from, char *to, char *msg, size_t len, unsigned int *sequence_number,unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi){
+    return _smpp_send_sm(sock, from, to, msg, len, DELIVER_SM, sequence_number, data_coding, src_ton, src_npi, dst_ton, dst_npi);
 }
 
-int smpp_send_submit_sm(socket_t *sock, char *from, char *to, char *msg, unsigned int *sequence_number, unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi){
-    return _smpp_send_sm(sock, from, to, msg, SUBMIT_SM, sequence_number, data_coding, src_ton, src_npi, dst_ton, dst_npi);
+int smpp_send_submit_sm(socket_t *sock, char *from, char *to, char *msg, size_t len, unsigned int *sequence_number, unsigned int data_coding, int src_ton, int src_npi, int dst_ton, int dst_npi){
+    return _smpp_send_sm(sock, from, to, msg, len, SUBMIT_SM, sequence_number, data_coding, src_ton, src_npi, dst_ton, dst_npi);
 }
 
 int smpp_send_query_sm(socket_t *sock, unsigned int *sequence_number){

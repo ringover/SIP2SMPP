@@ -23,11 +23,12 @@ const char* tab_default_charset[MAX_TAB_CHARSET] = {
 int conv_char_codec_str(char *in, size_t s_in, char *codec_in, char **out, size_t s_out, char *codec_out){
     INFO(LOG_SCREEN, "Iconv : %s to %s", codec_in ? codec_in : "", codec_out ? codec_out : "")
     if(in && s_in > 0 && out && codec_in && codec_out && strcmp(codec_in, codec_out) != 0){
-    INFO(LOG_SCREEN, "run : %s to %s", codec_in, codec_out)
+        size_t size_out = 0;
         if(*out == NULL){
             s_out = 4096;
             *out = (char*)calloc(s_out+1, sizeof(char));
         }
+        size_out = s_out;
         iconv_t icv = iconv_open(codec_out, codec_in);
         if((int)icv == -1){
             switch(errno){
@@ -42,7 +43,7 @@ int conv_char_codec_str(char *in, size_t s_in, char *codec_in, char **out, size_
             return (int) -1;
         }
         char *converted = *out;
-        if((iconv_t)iconv(icv, &in, &s_in, &converted, &s_out) == (iconv_t)-1){
+        if(iconv(icv, &in, &s_in, &converted, &size_out) == (size_t)-1){
             switch(errno){
                 case E2BIG :
                     ERROR(LOG_SCREEN, "The buffer is too short[%d]-> %s", errno, strerror(errno));
@@ -63,7 +64,7 @@ int conv_char_codec_str(char *in, size_t s_in, char *codec_in, char **out, size_
             *out = NULL;
             return (int) -1;
         }
-        return (int) 0;
+        return (int) (s_out - size_out);
     }
     return (int) -1;
 }

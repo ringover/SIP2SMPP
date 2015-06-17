@@ -11,6 +11,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
+#include <wchar.h>
 
 #include "log/log.h"
 
