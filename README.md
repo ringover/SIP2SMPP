@@ -21,14 +21,18 @@ Version 0.2.0
     make install
     ldconfig
 
-Download and install Libiconv : http://www.gnu.org/software/libiconv/#downloading
+Download and install Libiconv with GSM7 support:
+
+> https://github.com/bjtpartners/libiconv-1.14_gsm7
 
     ./configure --prefix=/usr/local
     make
     make install
     ldconfig
 
-Download and install LibZDB : http://www.tildeslash.com/libzdb/#
+Download and install LibZDB :
+
+> http://www.tildeslash.com/libzdb/#
 
     ./configure
     make
